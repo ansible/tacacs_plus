@@ -177,7 +177,7 @@ def test_client_socket_send(fake_socket, packets, state):
     )
     client = tacacs_plus.TACACSClient('127.0.0.1', 49, None, session_id=12345)
     client._sock = fake_socket
-    packet = client.send(body)
+    packet = client.send(body, tacacs_plus.TAC_PLUS_AUTHEN)
     assert isinstance(packet, tacacs_plus.TACACSPacket)
     reply = tacacs_plus.TACACSAuthenticationReply.unpacked(packet.body)
     assert getattr(reply, state) is True

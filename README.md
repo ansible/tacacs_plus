@@ -1,5 +1,7 @@
 # TACACS+ Python client
 
+[![Build Status](https://travis-ci.org/ansible/tacacs_plus.svg?branch=master)](https://travis-ci.org/ansible/tacacs_plus)
+
 A TACACS+ client that supports authentication and authorization.  At this time,
 the client does not support the accounting (session management) features of the
 TACACS+ protocol.

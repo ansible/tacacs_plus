@@ -2,6 +2,7 @@
 # All Rights Reserved.
 
 import argparse
+import contextlib
 import getpass
 import logging
 import random
@@ -50,11 +51,11 @@ TAC_PLUS_AUTHEN_STATUS_ERROR = 0x07
 TAC_PLUS_PRIV_LVL_MIN = 0x00
 
 # authorization statuses
-TAC_PLUS_AUTHOR_STATUS_PASS_ADD  = 0x01
+TAC_PLUS_AUTHOR_STATUS_PASS_ADD = 0x01
 TAC_PLUS_AUTHOR_STATUS_PASS_REPL = 0x02
-TAC_PLUS_AUTHOR_STATUS_FAIL      = 0x10
-TAC_PLUS_AUTHOR_STATUS_ERROR     = 0x11
-TAC_PLUS_AUTHOR_STATUS_FOLLOW    = 0x21
+TAC_PLUS_AUTHOR_STATUS_FAIL = 0x10
+TAC_PLUS_AUTHOR_STATUS_ERROR = 0x11
+TAC_PLUS_AUTHOR_STATUS_FOLLOW = 0x21
 
 # authentication methods
 TAC_PLUS_AUTHEN_METH_NOT_SET = 0x00
@@ -68,6 +69,7 @@ TAC_PLUS_AUTHEN_METH_GUEST = 0x08
 TAC_PLUS_AUTHEN_METH_RADIUS = 0x10
 TAC_PLUS_AUTHEN_METH_KRB4 = 0x11
 TAC_PLUS_AUTHEN_METH_RCMD = 0x20
+
 
 def crypt(header, body_bytes, secret):
     """
@@ -242,7 +244,8 @@ class TACACSHeader(object):
 
 class TACACSAuthenticationStart(object):
 
-    def __init__(self, username, authen_type, priv_lvl=TAC_PLUS_PRIV_LVL_MIN, data=six.b('')):
+    def __init__(self, username, authen_type, priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
+                 data=six.b('')):
         self.username = username
         self.action = TAC_PLUS_AUTHEN_LOGIN
         self.priv_lvl = priv_lvl
@@ -401,9 +404,11 @@ class TACACSAuthenticationReply(object):
             'data: %s' % self.data
         ])
 
+
 class TACACSAuthorizationStart(object):
 
-    def __init__(self, username, authen_method, priv_lvl, authen_type, arguments):
+    def __init__(self, username, authen_method, priv_lvl, authen_type,
+                 arguments):
         self.username = username
         self.authen_method = authen_method
         self.priv_lvl = priv_lvl
@@ -496,7 +501,9 @@ class TACACSAuthorizationReply(object):
         raw = six.BytesIO(raw)
         status, arg_cnt = struct.unpack('BB', raw.read(2))
         server_msg_len, data_len = struct.unpack('!HH', raw.read(4))
-        args_lens = struct.unpack('B'*arg_cnt, raw.read(arg_cnt)) if arg_cnt else []
+        args_lens = struct.unpack(
+            'B' * arg_cnt, raw.read(arg_cnt)
+        ) if arg_cnt else []
         server_msg = raw.read(server_msg_len)
         data = raw.read(data_len) if data_len else ''
         arguments = []
@@ -591,26 +598,31 @@ class TACACSClient(object):
             self._sock.connect(conn)
         return self._sock
 
-    def close_socket(self):
-        if self._sock:
-            self._sock.close()
-            self._sock = None
+    @contextlib.contextmanager
+    def closing(self):
+        try:
+            self.sock
+            yield
+        finally:
+            if self._sock:
+                self._sock.close()
+                self._sock = None
 
     def send(self, body, req_type, seq_no=1):
         """
         Send a TACACS+ message body
 
-        :param body:    packed bytes, i.e., `struct.pack(...)
-        :param req_type:   TAC_PLUS_AUTHEN /  TAC_PLUS_AUTHOR 
-        :param seq_no:  The sequence number of the current packet.  The
-                        first packet in a session MUST have the sequence
-                        number 1 and each subsequent packet will increment
-                        the sequence number by one.  Thus clients only send
-                        packets containing odd sequence numbers, and TACACS+
-                        servers only send packets containing even sequence
-                        numbers.
-        :return:        TACACSPacket
-        :raises:        socket.timeout, socket.error
+        :param body:     packed bytes, i.e., `struct.pack(...)
+        :param req_type: TAC_PLUS_AUTHEN /  TAC_PLUS_AUTHOR
+        :param seq_no:   The sequence number of the current packet.  The
+                         first packet in a session MUST have the sequence
+                         number 1 and each subsequent packet will increment
+                         the sequence number by one.  Thus clients only send
+                         packets containing odd sequence numbers, and TACACS+
+                         servers only send packets containing even sequence
+                         numbers.
+        :return:         TACACSPacket
+        :raises:         socket.timeout, socket.error
         """
         # construct a packet
         header = TACACSHeader(
@@ -698,37 +710,35 @@ class TACACSClient(object):
                         chap_ppp_id + password + chap_challenge
                     )).digest()
                 )
-        self.close_socket()
-        packet = self.send(
-            TACACSAuthenticationStart(username, authen_type, priv_lvl, start_data),
-            TAC_PLUS_AUTHEN
-        )
-        reply = TACACSAuthenticationReply.unpacked(packet.body)
-        logger.debug('\n'.join([
-            reply.__class__.__name__,
-            'recv header <%s>' % packet.header,
-            'recv body <%s>' % reply
-        ]))
-        if authen_type == TAC_PLUS_AUTHEN_TYPE_ASCII and reply.getpass:
-            packet = self.send(TACACSAuthenticationContinue(password),
-                               TAC_PLUS_AUTHEN,
-                               packet.seq_no + 1)
+        with self.closing():
+            packet = self.send(
+                TACACSAuthenticationStart(username, authen_type, priv_lvl,
+                                          start_data),
+                TAC_PLUS_AUTHEN
+            )
             reply = TACACSAuthenticationReply.unpacked(packet.body)
             logger.debug('\n'.join([
                 reply.__class__.__name__,
                 'recv header <%s>' % packet.header,
                 'recv body <%s>' % reply
             ]))
-        self.close_socket()
+            if authen_type == TAC_PLUS_AUTHEN_TYPE_ASCII and reply.getpass:
+                packet = self.send(TACACSAuthenticationContinue(password),
+                                   TAC_PLUS_AUTHEN,
+                                   packet.seq_no + 1)
+                reply = TACACSAuthenticationReply.unpacked(packet.body)
+                logger.debug('\n'.join([
+                    reply.__class__.__name__,
+                    'recv header <%s>' % packet.header,
+                    'recv body <%s>' % reply
+                ]))
         return reply
 
-    def authorizate(self, username,
-                    arguments = [],
-                    authen_type=TAC_PLUS_AUTHEN_TYPE_ASCII,
-                    priv_lvl = TAC_PLUS_PRIV_LVL_MIN
-                    ):
+    def authorize(self, username, arguments=[],
+                  authen_type=TAC_PLUS_AUTHEN_TYPE_ASCII,
+                  priv_lvl=TAC_PLUS_PRIV_LVL_MIN):
         """
-        Authorizate with a TACACS+ server.
+        Authorize with a TACACS+ server.
 
         :param username:
         :param password:
@@ -740,22 +750,29 @@ class TACACSClient(object):
         :return:               TACACSAuthenticationReply
         :raises:               socket.timeout, socket.error
         """
-        self.close_socket()
-        packet = self.send(
-            TACACSAuthorizationStart(username, TAC_PLUS_AUTHEN_METH_TACACSPLUS, priv_lvl, authen_type, arguments),
-            TAC_PLUS_AUTHOR
+        with self.closing():
+            packet = self.send(
+                TACACSAuthorizationStart(username,
+                                         TAC_PLUS_AUTHEN_METH_TACACSPLUS,
+                                         priv_lvl, authen_type, arguments),
+                TAC_PLUS_AUTHOR
+            )
+            reply = TACACSAuthorizationReply.unpacked(packet.body)
+            logger.debug('\n'.join([
+                reply.__class__.__name__,
+                'recv header <%s>' % packet.header,
+                'recv body <%s>' % reply
+            ]))
+
+        reply_arguments = dict([
+            arg.split('=', 1)
+            for arg in reply.arguments or []
+            if arg.find('=') > -1]
         )
-        reply = TACACSAuthorizationReply.unpacked(packet.body)
-        logger.debug('\n'.join([
-            reply.__class__.__name__,
-            'recv header <%s>' % packet.header,
-            'recv body <%s>' % reply
-        ]))
-        self.close_socket()
-        reply_arguments = dict([arg.split('=',1) for arg in reply.arguments or [] if arg.find('=') > -1])
-        if int(reply_arguments.get('priv_lvl',0)) > priv_lvl:
+        if int(reply_arguments.get('priv_lvl', 0)) > priv_lvl:
             reply.status = TAC_PLUS_AUTHOR_STATUS_FAIL
         return reply
+
 
 def handle_command_line():
     parser = argparse.ArgumentParser(description='simple tacacs+ auth client')

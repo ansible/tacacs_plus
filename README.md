@@ -1,8 +1,8 @@
 # TACACS+ Python client
 
-A TACACS+ client that supports authentication.  At this time, the client does
-not support the authorization (account management) or accounting (session
-management) features of the TACACS+ protocol.
+A TACACS+ client that supports authentication and authorization.  At this time,
+the client does not support the accounting (session management) features of the
+TACACS+ protocol.
 
 Unlike RADIUS, which was designed for similar purposes, the TACACS+ protocol
 offers basic packet encryption but, as with most crypto designed back then,

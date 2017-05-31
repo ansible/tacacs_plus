@@ -802,7 +802,7 @@ def handle_command_line():
         secret,
         timeout=args.timeout
     ).authenticate(args.username, password,
-                   TAC_PLUS_AUTHEN_TYPES[args.authen_type],
+                   authen_type=TAC_PLUS_AUTHEN_TYPES[args.authen_type],
                    chap_ppp_id=chap_ppp_id,
                    chap_challenge=chap_challenge)
     if auth.valid:

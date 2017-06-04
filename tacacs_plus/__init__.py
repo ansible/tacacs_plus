@@ -49,6 +49,7 @@ TAC_PLUS_AUTHEN_STATUS_ERROR = 0x07
 
 # priveleges
 TAC_PLUS_PRIV_LVL_MIN = 0x00
+TAC_PLUS_PRIV_LVL_MAX = 0x0F
 
 # authorization statuses
 TAC_PLUS_AUTHOR_STATUS_PASS_ADD = 0x01
@@ -746,7 +747,7 @@ class TACACSClient(object):
         :param authen_type:    TAC_PLUS_AUTHEN_TYPE_ASCII,
                                TAC_PLUS_AUTHEN_TYPE_PAP,
                                TAC_PLUS_AUTHEN_TYPE_CHAP
-        :param priv_lvl:       This indicates the privilege level.
+        :param priv_lvl:       This indicates the minimal required privilege level.
         :return:               TACACSAuthenticationReply
         :raises:               socket.timeout, socket.error
         """
@@ -769,7 +770,7 @@ class TACACSClient(object):
             for arg in reply.arguments or []
             if arg.find('=') > -1]
         )
-        if int(reply_arguments.get('priv_lvl', 0)) > priv_lvl:
+        if int(reply_arguments.get('priv_lvl', TAC_PLUS_PRIV_LVL_MAX)) <= priv_lvl:
             reply.status = TAC_PLUS_AUTHOR_STATUS_FAIL
         return reply
 

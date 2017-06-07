@@ -747,7 +747,7 @@ class TACACSClient(object):
         :param authen_type:    TAC_PLUS_AUTHEN_TYPE_ASCII,
                                TAC_PLUS_AUTHEN_TYPE_PAP,
                                TAC_PLUS_AUTHEN_TYPE_CHAP
-        :param priv_lvl:       This indicates the minimal required privilege level.
+        :param priv_lvl:       Minimal Required priv_lvl.
         :return:               TACACSAuthenticationReply
         :raises:               socket.timeout, socket.error
         """
@@ -770,7 +770,9 @@ class TACACSClient(object):
             for arg in reply.arguments or []
             if arg.find('=') > -1]
         )
-        if int(reply_arguments.get('priv_lvl', TAC_PLUS_PRIV_LVL_MAX)) <= priv_lvl:
+        user_priv_lvl = int(reply_arguments.get(
+            'priv_lvl', TAC_PLUS_PRIV_LVL_MAX))
+        if user_priv_lvl < priv_lvl:
             reply.status = TAC_PLUS_AUTHOR_STATUS_FAIL
         return reply
 

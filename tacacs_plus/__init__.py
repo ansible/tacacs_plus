@@ -771,7 +771,7 @@ class TACACSClient(object):
             if arg.find('=') > -1]
         )
         user_priv_lvl = int(reply_arguments.get(
-            'priv_lvl', TAC_PLUS_PRIV_LVL_MAX))
+            'priv-lvl', TAC_PLUS_PRIV_LVL_MAX))
         if user_priv_lvl < priv_lvl:
             reply.status = TAC_PLUS_AUTHOR_STATUS_FAIL
         return reply

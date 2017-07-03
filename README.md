@@ -47,7 +47,7 @@ optional arguments:
 
 ```python
 #!/usr/bin/env python
-from tacacs_plus.aaa import TACACSClient
+from tacacs_plus.client import TACACSClient
 from tacacs_plus.flags import TAC_PLUS_AUTHEN_TYPE_ASCII
 
 auth = TACACSClient('host', 49, 'secret', timeout=10).authenticate(

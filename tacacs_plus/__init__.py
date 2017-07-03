@@ -8,7 +8,7 @@ import logging
 import six
 
 from .flags import TAC_PLUS_AUTHEN_TYPES
-from .aaa import TACACSClient
+from .client import TACACSClient
 
 logger = logging.getLogger(__name__)
 

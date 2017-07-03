@@ -17,7 +17,7 @@ from tacacs_plus.packet import TACACSHeader, TACACSPacket, crypt
 from tacacs_plus.authentication import (
     TACACSAuthenticationStart, TACACSAuthenticationContinue, TACACSAuthenticationReply
 )
-from tacacs_plus.aaa import TACACSClient
+from tacacs_plus.client import TACACSClient
 
 AUTH_HEADER = six.b('\xc0\x01\x01\x00\x00\x0009\x00\x00\x00')
 AUTH_HEADER_V12_1 = six.b('\xc1\x01\x01\x00\x00\x0009\x00\x00\x00')

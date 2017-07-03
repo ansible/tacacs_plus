@@ -2,7 +2,9 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
-import tacacs_plus
+
+from tacacs_plus.aaa import TACACSClient
+from tacacs_plus.flags import TAC_PLUS_AUTHEN_TYPES
 
 logger = logging.getLogger(__file__)
 
@@ -33,14 +35,14 @@ class TACACSPlusBackend(object):
         if not settings.TACACSPLUS_HOST:
             return None
         try:
-            auth = tacacs_plus.TACACSClient(
+            auth = TACACSClient(
                 settings.TACACSPLUS_HOST.encode('utf-8'),
                 settings.TACACSPLUS_PORT,
                 settings.TACACSPLUS_SECRET.encode('utf-8'),
                 timeout=settings.TACACSPLUS_SESSION_TIMEOUT,
             ).authenticate(
                 username.encode('utf-8'), password.encode('utf-8'),
-                tacacs_plus.TAC_PLUS_AUTHEN_TYPES[settings.TACACSPLUS_AUTH_PROTOCOL],
+                TAC_PLUS_AUTHEN_TYPES[settings.TACACSPLUS_AUTH_PROTOCOL],
             )
         except Exception as e:
             logger.exception("TACACS+ Authentication Error: %s" % (e.message,))

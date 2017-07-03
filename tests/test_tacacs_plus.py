@@ -9,7 +9,15 @@ from uuid import uuid4
 import pytest
 import six
 
-import tacacs_plus
+from tacacs_plus.flags import (
+    TAC_PLUS_AUTHEN, TAC_PLUS_AUTHEN_TYPE_ASCII,
+    TAC_PLUS_AUTHEN_TYPE_PAP, TAC_PLUS_AUTHEN_TYPE_CHAP
+)
+from tacacs_plus.packet import TACACSHeader, TACACSPacket, crypt
+from tacacs_plus.authentication import (
+    TACACSAuthenticationStart, TACACSAuthenticationContinue, TACACSAuthenticationReply
+)
+from tacacs_plus.aaa import TACACSClient
 
 AUTH_HEADER = six.b('\xc0\x01\x01\x00\x00\x0009\x00\x00\x00')
 AUTH_HEADER_V12_1 = six.b('\xc1\x01\x01\x00\x00\x0009\x00\x00\x00')
@@ -50,9 +58,9 @@ def fake_socket(tmpdir_factory, request):
 
 @pytest.fixture
 def tacacs_header():
-    return tacacs_plus.TACACSHeader(
+    return TACACSHeader(
         192,  # version
-        tacacs_plus.TAC_PLUS_AUTHEN,
+        TAC_PLUS_AUTHEN,
         12345,  # session_id,
         0,  # body len
         1,  # seq_no
@@ -62,49 +70,47 @@ def tacacs_header():
 @pytest.mark.parametrize('username', ['username', 'long-very-padded-username'])
 def test_packet_body_obfuscation(tacacs_header, username):
     header = tacacs_header
-    body = tacacs_plus.TACACSAuthenticationStart(
+    body = TACACSAuthenticationStart(
         username,
-        tacacs_plus.TAC_PLUS_AUTHEN_TYPE_ASCII
+        TAC_PLUS_AUTHEN_TYPE_ASCII
     ).packed
     secret = '6f188b78-964f-4f3e-aea7-da26b7772495'
-    encrypted = tacacs_plus.crypt(header, body, secret)
-    assert tacacs_plus.crypt(header, encrypted, secret) == body
+    encrypted = crypt(header, body, secret)
+    assert crypt(header, encrypted, secret) == body
 
 
 def test_packet_seq_no(tacacs_header):
-    packet = tacacs_plus.TACACSPacket(tacacs_header, '', None)
+    packet = TACACSPacket(tacacs_header, '', None)
     assert packet.seq_no == 1
 
 
 def test_packet_encrypted(tacacs_header):
-    assert tacacs_plus.TACACSPacket(tacacs_header, '', None).encrypted is False
-    assert tacacs_plus.TACACSPacket(tacacs_header, '', 'secret').encrypted is True
+    assert TACACSPacket(tacacs_header, '', None).encrypted is False
+    assert TACACSPacket(tacacs_header, '', 'secret').encrypted is True
 
 
 @pytest.mark.parametrize('secret_key', ('secret', None))
 def test_packet_raw(secret_key, tacacs_header):
     header = tacacs_header
-    body = tacacs_plus.TACACSAuthenticationStart(
+    body = TACACSAuthenticationStart(
         'user123',
-        tacacs_plus.TAC_PLUS_AUTHEN_TYPE_ASCII
+        TAC_PLUS_AUTHEN_TYPE_ASCII
     )
     header.length = len(body.packed)
-    packet = tacacs_plus.TACACSPacket(header, body.packed, secret_key)
-    assert isinstance(packet.header, tacacs_plus.TACACSHeader)
+    packet = TACACSPacket(header, body.packed, secret_key)
+    assert isinstance(packet.header, TACACSHeader)
 
     if secret_key:
-        assert bytes(packet) == header.packed + tacacs_plus.crypt(header,
-                                                               body.packed,
-                                                               secret_key)
+        assert bytes(packet) == header.packed + crypt(header, body.packed, secret_key)
     else:
         assert bytes(packet) == header.packed + body.packed
 
 
 def test_header_pack(tacacs_header):
     packed = tacacs_header.packed
-    unpacked = tacacs_plus.TACACSHeader.unpacked(packed)
+    unpacked = TACACSHeader.unpacked(packed)
     assert unpacked.version == 192
-    assert unpacked.type == tacacs_plus.TAC_PLUS_AUTHEN
+    assert unpacked.type == TAC_PLUS_AUTHEN
     assert unpacked.session_id == 12345
     assert unpacked.length == 0
     assert unpacked.seq_no == 1
@@ -113,9 +119,9 @@ def test_header_pack(tacacs_header):
 
 def test_auth_start_pack():
     username = 'user123'
-    packed = tacacs_plus.TACACSAuthenticationStart(
+    packed = TACACSAuthenticationStart(
         username,
-        tacacs_plus.TAC_PLUS_AUTHEN_TYPE_ASCII
+        TAC_PLUS_AUTHEN_TYPE_ASCII
     ).packed
     assert packed == six.b(
         '\x01'  # tacacs_plus.TAC_PLUS_AUTHEN_LOGIN \
@@ -132,7 +138,7 @@ def test_auth_start_pack():
 
 def test_auth_continue_pack():
     password = 'password'
-    packed = tacacs_plus.TACACSAuthenticationContinue(password).packed
+    packed = TACACSAuthenticationContinue(password).packed
     assert packed == six.b(
         '\x00\x08'  # user_msg len (password length) \
         '\x00\x00'  # data_len \
@@ -147,13 +153,13 @@ def test_auth_continue_pack():
     (six.b('\x07\x00\x00\x00\x00\x00'), 'error', 'ERROR'),
 ])
 def test_auth_reply_unpack(raw, state, human_status):
-    reply = tacacs_plus.TACACSAuthenticationReply.unpacked(raw)
+    reply = TACACSAuthenticationReply.unpacked(raw)
     assert getattr(reply, state) is True
     assert reply.human_status == human_status
 
 
 def test_auth_reply_unpack_server_msg():
-    reply = tacacs_plus.TACACSAuthenticationReply.unpacked(
+    reply = TACACSAuthenticationReply.unpacked(
         six.b('\x05\x01\x00\n\x00\x00Password: ')
     )
     assert reply.getpass is True
@@ -171,15 +177,15 @@ def test_auth_reply_unpack_server_msg():
     ]
 )
 def test_client_socket_send(fake_socket, packets, state):
-    body = tacacs_plus.TACACSAuthenticationStart(
+    body = TACACSAuthenticationStart(
         'user123',
-        tacacs_plus.TAC_PLUS_AUTHEN_TYPE_ASCII
+        TAC_PLUS_AUTHEN_TYPE_ASCII
     )
-    client = tacacs_plus.TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     client._sock = fake_socket
-    packet = client.send(body, tacacs_plus.TAC_PLUS_AUTHEN)
-    assert isinstance(packet, tacacs_plus.TACACSPacket)
-    reply = tacacs_plus.TACACSAuthenticationReply.unpacked(packet.body)
+    packet = client.send(body, TAC_PLUS_AUTHEN)
+    assert isinstance(packet, TACACSPacket)
+    reply = TACACSAuthenticationReply.unpacked(packet.body)
     assert getattr(reply, state) is True
 
     # the first 12 bytes of the packet represent the header
@@ -188,7 +194,7 @@ def test_client_socket_send(fake_socket, packets, state):
         fake_socket.buff.read(12), fake_socket.buff.read()
     )
 
-    body_length = tacacs_plus.TACACSHeader.unpacked(sent_header).length
+    body_length = TACACSHeader.unpacked(sent_header).length
     assert len(sent_body) == body_length
     assert body.packed == sent_body
 
@@ -207,26 +213,26 @@ def test_authenticate_ascii(fake_socket, packets):
     client -> AUTHCONTINUE (password)
               STATUS_PASS              <- server
     """
-    client = tacacs_plus.TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     client._sock = fake_socket
     reply = client.authenticate('username', 'pass')
     assert reply.valid
 
     fake_socket.buff.seek(0)
-    first_header = tacacs_plus.TACACSHeader.unpacked(fake_socket.buff.read(12))
+    first_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
     assert (first_header.version_max, first_header.version_min) == (12, 0)
     first_body = fake_socket.buff.read(first_header.length)
-    assert tacacs_plus.TACACSAuthenticationStart(
+    assert TACACSAuthenticationStart(
         'username',
-        tacacs_plus.TAC_PLUS_AUTHEN_TYPE_ASCII
+        TAC_PLUS_AUTHEN_TYPE_ASCII
     ).packed == first_body
 
-    second_header = tacacs_plus.TACACSHeader.unpacked(fake_socket.buff.read(12))
+    second_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
     assert (first_header.version_max, first_header.version_min) == (12, 0)
     assert second_header.seq_no > first_header.seq_no
 
     second_body = fake_socket.buff.read()
-    assert tacacs_plus.TACACSAuthenticationContinue('pass').packed == second_body
+    assert TACACSAuthenticationContinue('pass').packed == second_body
 
 
 @pytest.mark.parametrize(
@@ -238,19 +244,19 @@ def test_authenticate_pap(fake_socket, packets):
     client -> AUTHSTART (user+pass)
               STATUS_PASS              <- server
     """
-    client = tacacs_plus.TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     client._sock = fake_socket
     reply = client.authenticate('username', 'pass',
-                                authen_type=tacacs_plus.TAC_PLUS_AUTHEN_TYPE_PAP)
+                                authen_type=TAC_PLUS_AUTHEN_TYPE_PAP)
     assert reply.valid
 
     fake_socket.buff.seek(0)
-    first_header = tacacs_plus.TACACSHeader.unpacked(fake_socket.buff.read(12))
+    first_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
     assert (first_header.version_max, first_header.version_min) == (12, 1)
     first_body = fake_socket.buff.read(first_header.length)
-    assert tacacs_plus.TACACSAuthenticationStart(
+    assert TACACSAuthenticationStart(
         'username',
-        tacacs_plus.TAC_PLUS_AUTHEN_TYPE_PAP,
+        TAC_PLUS_AUTHEN_TYPE_PAP,
         data=six.b('pass')
     ).packed == first_body
 
@@ -264,21 +270,21 @@ def test_authenticate_chap(fake_socket, packets):
     client -> AUTHSTART user+md5challenge(pass)
               STATUS_PASS                         <- server
     """
-    client = tacacs_plus.TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     client._sock = fake_socket
     reply = client.authenticate('username', 'pass',
-                                authen_type=tacacs_plus.TAC_PLUS_AUTHEN_TYPE_CHAP,
+                                authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
                                 chap_ppp_id='A',
                                 chap_challenge='challenge')
     assert reply.valid
 
     fake_socket.buff.seek(0)
-    first_header = tacacs_plus.TACACSHeader.unpacked(fake_socket.buff.read(12))
+    first_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
     assert (first_header.version_max, first_header.version_min) == (12, 1)
     first_body = fake_socket.buff.read(first_header.length)
-    assert tacacs_plus.TACACSAuthenticationStart(
+    assert TACACSAuthenticationStart(
         'username',
-        tacacs_plus.TAC_PLUS_AUTHEN_TYPE_CHAP,
+        TAC_PLUS_AUTHEN_TYPE_CHAP,
         data=(
             six.b('A') +
             six.b('challenge') +
@@ -288,16 +294,16 @@ def test_authenticate_chap(fake_socket, packets):
 
 
 def test_authenticate_chap_ppp_id_required():
-    client = tacacs_plus.TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     with pytest.raises(ValueError):
         client.authenticate('username', 'pass',
-                            authen_type=tacacs_plus.TAC_PLUS_AUTHEN_TYPE_CHAP,
+                            authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
                             chap_challenge='challenge')
 
 
 def test_authenticate_chap_challenge_required():
-    client = tacacs_plus.TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     with pytest.raises(ValueError):
         client.authenticate('username', 'pass',
-                            authen_type=tacacs_plus.TAC_PLUS_AUTHEN_TYPE_CHAP,
+                            authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
                             chap_ppp_id='X')

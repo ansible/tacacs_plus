@@ -33,9 +33,9 @@ setup(
     license='BSD',
     packages=find_packages(exclude=['examples']),
     install_requires=['six'],
-    tests_require=['pytest'],
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest', 'pytest-cov'],
     include_package_data=True,
     scripts=['bin/tacacs_plus'],
-    test_suite='tacacs_plus',
     zip_safe=False
 )

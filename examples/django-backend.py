@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import User
 
-from tacacs_plus.aaa import TACACSClient
+from tacacs_plus.client import TACACSClient
 from tacacs_plus.flags import TAC_PLUS_AUTHEN_TYPES
 
 logger = logging.getLogger(__file__)

@@ -47,10 +47,11 @@ optional arguments:
 
 ```python
 #!/usr/bin/env python
-import tacacs_plus
+from tacacs_plus.client import TACACSClient
+from tacacs_plus.flags import TAC_PLUS_AUTHEN_TYPE_ASCII
 
-auth = tacacs_plus.TACACSClient('host', 49, 'secret', timeout=10).authenticate(
-    'username', 'password', tacacs_plus.TAC_PLUS_AUTHEN_TYPE_ASCII
+auth = TACACSClient('host', 49, 'secret', timeout=10).authenticate(
+    'username', 'password', TAC_PLUS_AUTHEN_TYPE_ASCII
 )
 print "PASS!" if auth.valid else "FAIL!"
 ```

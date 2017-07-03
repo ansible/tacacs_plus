@@ -19,3 +19,6 @@ pip-log.txt
 htmlcov
 
 .DS_Store
+
+.cache
+.eggs

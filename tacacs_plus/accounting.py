@@ -2,18 +2,20 @@ import struct
 
 import six
 
+
 from .flags import (
-    TAC_PLUS_AUTHEN_SVC_LOGIN, TAC_PLUS_AUTHOR_STATUS_PASS_ADD, TAC_PLUS_AUTHOR_STATUS_PASS_REPL,
-    TAC_PLUS_AUTHOR_STATUS_FAIL, TAC_PLUS_AUTHOR_STATUS_ERROR, TAC_PLUS_AUTHOR_STATUS_FOLLOW,
+    TAC_PLUS_AUTHEN_SVC_LOGIN, TAC_PLUS_ACCT_STATUS_SUCCESS,
+    TAC_PLUS_ACCT_STATUS_ERROR, TAC_PLUS_ACCT_STATUS_FOLLOW,
     TAC_PLUS_VIRTUAL_PORT, TAC_PLUS_VIRTUAL_REM_ADDR
 )
 
 
-class TACACSAuthorizationStart(object):
+class TACACSAccountingStart(object):
 
-    def __init__(self, username, authen_method, priv_lvl, authen_type,
+    def __init__(self, username, flags, authen_method, priv_lvl, authen_type,
                  arguments, rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR, port=TAC_PLUS_VIRTUAL_PORT):
         self.username = username
+        self.flags = flags
         self.authen_method = authen_method
         self.priv_lvl = priv_lvl
         self.authen_type = authen_type
@@ -26,35 +28,33 @@ class TACACSAuthorizationStart(object):
     def packed(self):
         #  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8
         # +----------------+----------------+----------------+----------------+
-        # |  authen_method |    priv_lvl    |  authen_type   | authen_service |
+        # |      flags     |  authen_method |    priv_lvl    |  authen_type   |
         # +----------------+----------------+----------------+----------------+
-        # |    user len    |    port len    |  rem_addr len  |    arg_cnt     |
+        # | authen_service |    user_len    |    port_len    |  rem_addr_len  |
         # +----------------+----------------+----------------+----------------+
-        # |   arg 1 len    |   arg 2 len    |      ...       |   arg N len    |
+        # |    arg_cnt     |   arg_1_len    |   arg_2_len    |      ...       |
         # +----------------+----------------+----------------+----------------+
-        # |   user ...
+        # |   arg_N_len    |    user ...
         # +----------------+----------------+----------------+----------------+
         # |   port ...
         # +----------------+----------------+----------------+----------------+
         # |   rem_addr ...
         # +----------------+----------------+----------------+----------------+
-        # |   arg 1 ...
+        # |   arg_1 ...
         # +----------------+----------------+----------------+----------------+
-        # |   arg 2 ...
+        # |   arg_2 ...
         # +----------------+----------------+----------------+----------------+
         # |   ...
         # +----------------+----------------+----------------+----------------+
-        # |   arg N ...
+        # |   arg_N ...
         # +----------------+----------------+----------------+----------------+
-
-        # B = unsigned char
-        # s = char[]
         username = six.b(self.username)
         rem_addr = six.b(self.rem_addr)
         port = six.b(self.port)
         arguments = self.arguments
         body = struct.pack(
-            'B' * 8,
+            'B' * 9,
+            self.flags,
             self.authen_method,
             self.priv_lvl,
             self.authen_type,
@@ -73,86 +73,55 @@ class TACACSAuthorizationStart(object):
         return body
 
 
-class TACACSAuthorizationReply(object):
-
-    def __init__(self, status, arg_cnt, server_msg, data, arguments):
+class TACACSAccountingReply(object):
+    def __init__(self, status, server_msg, data):
         self.status = status
-        self.arg_cnt = arg_cnt
         self.server_msg = server_msg
         self.data = data
-        self.arguments = arguments
 
     @classmethod
     def unpacked(cls, raw):
         #  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8
         # +----------------+----------------+----------------+----------------+
-        # |    status      |     arg_cnt    |         server_msg len          |
+        # |         server_msg len          |            data_len             |
         # +----------------+----------------+----------------+----------------+
-        # +            data len             |    arg 1 len   |    arg 2 len   |
+        # |     status     |         server_msg ...
         # +----------------+----------------+----------------+----------------+
-        # |      ...       |   arg N len    |         server_msg ...
-        # +----------------+----------------+----------------+----------------+
-        # |   data ...
-        # +----------------+----------------+----------------+----------------+
-        # |   arg 1 ...
-        # +----------------+----------------+----------------+----------------+
-        # |   arg 2 ...
-        # +----------------+----------------+----------------+----------------+
-        # |   ...
-        # +----------------+----------------+----------------+----------------+
-        # |   arg N ...
-        # +----------------+----------------+----------------+----------------+
+        # |     data ...
+        # +----------------+
 
         # B = unsigned char
         # !H = network-order (big-endian) unsigned short
         raw = six.BytesIO(raw)
-        status, arg_cnt = struct.unpack('BB', raw.read(2))
         server_msg_len, data_len = struct.unpack('!HH', raw.read(4))
-        args_lens = struct.unpack(
-            'B' * arg_cnt, raw.read(arg_cnt)
-        ) if arg_cnt else []
+        status = struct.unpack('B', raw.read(1))[0]
         server_msg = raw.read(server_msg_len)
-        data = raw.read(data_len) if data_len else ''
-        arguments = []
-        for arg_len in args_lens:
-            arg = raw.read(arg_len) if arg_len else ''
-            arguments.append(arg)
-        return cls(status, arg_cnt, server_msg, data, arguments)
+        data = raw.read(data_len)
+        return cls(status, server_msg, data)
 
     @property
     def valid(self):
-        return self.status == TAC_PLUS_AUTHOR_STATUS_PASS_ADD
-
-    @property
-    def invalid(self):
-        return self.status == TAC_PLUS_AUTHOR_STATUS_FAIL
+        return self.status == TAC_PLUS_ACCT_STATUS_SUCCESS
 
     @property
     def error(self):
-        return self.status == TAC_PLUS_AUTHOR_STATUS_ERROR
-
-    @property
-    def reply(self):
-        return self.status == TAC_PLUS_AUTHOR_STATUS_PASS_REPL
+        return self.status == TAC_PLUS_ACCT_STATUS_ERROR
 
     @property
     def follow(self):
-        return self.status == TAC_PLUS_AUTHOR_STATUS_FOLLOW
+        return self.status == TAC_PLUS_ACCT_STATUS_FOLLOW
 
     @property
     def human_status(self):
         return {
-            TAC_PLUS_AUTHOR_STATUS_PASS_ADD: 'PASS',
-            TAC_PLUS_AUTHOR_STATUS_FAIL: 'FAIL',
-            TAC_PLUS_AUTHOR_STATUS_PASS_REPL: 'REPL',
-            TAC_PLUS_AUTHOR_STATUS_ERROR: 'ERROR',
-            TAC_PLUS_AUTHOR_STATUS_FOLLOW: 'FOLLOW',
+            TAC_PLUS_ACCT_STATUS_SUCCESS: 'SUCCESS',
+            TAC_PLUS_ACCT_STATUS_ERROR: 'ERROR',
+            TAC_PLUS_ACCT_STATUS_FOLLOW: 'FOLLOW'
         }.get(self.status, 'UNKNOWN: %s' % self.status)
 
     def __str__(self):
         return ', '.join([
             'status: %s' % self.human_status,
             'server_msg: %s' % self.server_msg,
-            'data: %s' % self.data,
-            'args: %s' % ','.join(self.arguments)
+            'data: %s' % self.data
         ])

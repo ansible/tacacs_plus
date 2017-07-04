@@ -6,20 +6,22 @@ import six
 from .flags import (
     TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_AUTHEN_LOGIN, TAC_PLUS_AUTHEN_SVC_LOGIN,
     TAC_PLUS_AUTHEN_STATUS_PASS, TAC_PLUS_AUTHEN_STATUS_FAIL, TAC_PLUS_AUTHEN_STATUS_ERROR,
-    TAC_PLUS_AUTHEN_STATUS_GETPASS
+    TAC_PLUS_AUTHEN_STATUS_GETPASS, TAC_PLUS_VIRTUAL_PORT, TAC_PLUS_VIRTUAL_REM_ADDR
 )
 
 
 class TACACSAuthenticationStart(object):
 
     def __init__(self, username, authen_type, priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
-                 data=six.b('')):
+                 data=six.b(''), rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR, port=TAC_PLUS_VIRTUAL_PORT):
         self.username = username
         self.action = TAC_PLUS_AUTHEN_LOGIN
         self.priv_lvl = priv_lvl
         self.authen_type = authen_type
         self.service = TAC_PLUS_AUTHEN_SVC_LOGIN
         self.data = data
+        self.rem_addr = rem_addr
+        self.port = port
 
     @property
     def packed(self):
@@ -42,8 +44,9 @@ class TACACSAuthenticationStart(object):
         # B = unsigned char
         # s = char[]
         username = six.b(self.username)
+        rem_addr = six.b(self.rem_addr)
+        port = six.b(self.port)
         data = self.data
-        port = rem_addr = six.b('')
         body = struct.pack(
             'B' * 8,
             self.action,

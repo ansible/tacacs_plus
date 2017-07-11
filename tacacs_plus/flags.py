@@ -24,6 +24,9 @@ TAC_PLUS_AUTHEN_TYPES = {
     'chap': TAC_PLUS_AUTHEN_TYPE_CHAP,
 }
 
+# authentication flags
+TAC_PLUS_CONTINUE_FLAG_ABORT = 0x01
+
 # authentication statuses
 TAC_PLUS_AUTHEN_STATUS_PASS = 0x01
 TAC_PLUS_AUTHEN_STATUS_FAIL = 0x02

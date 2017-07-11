@@ -12,7 +12,8 @@ from .flags import (
     TAC_PLUS_AUTHEN_TYPE_CHAP, TAC_PLUS_MINOR_VER_ONE, TAC_PLUS_AUTHEN_TYPE_PAP,
     TAC_PLUS_AUTHEN, TAC_PLUS_AUTHEN_TYPE_ASCII, TAC_PLUS_AUTHEN_METH_TACACSPLUS,
     TAC_PLUS_AUTHOR, TAC_PLUS_AUTHOR_STATUS_FAIL, TAC_PLUS_PRIV_LVL_MAX,
-    TAC_PLUS_ACCT, TAC_PLUS_VIRTUAL_REM_ADDR, TAC_PLUS_VIRTUAL_PORT
+    TAC_PLUS_ACCT, TAC_PLUS_VIRTUAL_REM_ADDR, TAC_PLUS_VIRTUAL_PORT,
+    TAC_PLUS_AUTHEN_STATUS_FAIL, TAC_PLUS_CONTINUE_FLAG_ABORT
 )
 from .packet import TACACSPacket, TACACSHeader
 from .authentication import TACACSAuthenticationStart, TACACSAuthenticationContinue, TACACSAuthenticationReply
@@ -209,6 +210,9 @@ class TACACSClient(object):
                     'recv header <%s>' % packet.header,
                     'recv body <%s>' % reply
                 ]))
+                if reply.flags == TAC_PLUS_CONTINUE_FLAG_ABORT:
+                    reply.status = TAC_PLUS_AUTHEN_STATUS_FAIL
+
         return reply
 
     def authorize(self, username, arguments=[],

@@ -2,7 +2,6 @@ import struct
 
 import six
 
-
 from .flags import (
     TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_AUTHEN_LOGIN, TAC_PLUS_AUTHEN_SVC_LOGIN,
     TAC_PLUS_AUTHEN_STATUS_PASS, TAC_PLUS_AUTHEN_STATUS_FAIL, TAC_PLUS_AUTHEN_STATUS_ERROR,
@@ -13,7 +12,8 @@ from .flags import (
 class TACACSAuthenticationStart(object):
 
     def __init__(self, username, authen_type, priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
-                 data=six.b(''), rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR, port=TAC_PLUS_VIRTUAL_PORT):
+                 data=six.b(''), rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR,
+                 port=TAC_PLUS_VIRTUAL_PORT):
         self.username = username
         self.action = TAC_PLUS_AUTHEN_LOGIN
         self.priv_lvl = priv_lvl
@@ -65,21 +65,25 @@ class TACACSAuthenticationStart(object):
     def __str__(self):
         return ', '.join([
             'action: %s' % self.action,
-            'priv_lvl: %s' % self.priv_lvl,
             'authen_type: %s' % self.authen_type,
-            'service: %s' % self.service,
-            'user_len: %d' % len(self.username),
-            'port_len: 0',
-            'rem_addr_len: 0',
-            'data_len: %s' % len(self.data),
+            'authen_service: %s' % self.service,
+            'data: %s' % self.data,
+            'data_len: %d' % len(self.data),
+            'priv_lvl: %s' % self.priv_lvl,
+            'port: %s' % self.port,
+            'port_len: %d' % len(self.port),
+            'rem_addr: %s' % self.rem_addr,
+            'rem_addr_len: %d' % len(self.rem_addr),
             'user: %s' % self.username,
-            'data: %s' % self.data
+            'user_len: %d' % len(self.username)
         ])
 
 
 class TACACSAuthenticationContinue(object):
-    def __init__(self, password):
+    def __init__(self, password, data=six.b(''), flags=0):
         self.password = password
+        self.data = data
+        self.flags = flags
 
     @property
     def packed(self):
@@ -97,19 +101,21 @@ class TACACSAuthenticationContinue(object):
         # !H = network-order (big-endian) unsigned short
         # s = char[]
         password = six.b(self.password)
+        data = self.data
         return (
             struct.pack('!H', len(password)) +
-            struct.pack('!H', 0) +
-            struct.pack('B', 0) +
-            struct.pack('%ds' % len(password), password)
+            struct.pack('!H', len(data)) +
+            struct.pack('B', self.flags) +
+            struct.pack('%ds' % len(password), password) +
+            struct.pack('%ds' % len(data), data)
         )
 
     def __str__(self):
         return ', '.join([
-            'user_msg_len: %s' % len(self.password),
             'data_len: 0',
             'flags: 0',
-            'user_msg: %s' % self.password
+            'user_msg: %s' % self.password,
+            'user_msg_len: %s' % len(self.password)
         ])
 
 
@@ -169,8 +175,10 @@ class TACACSAuthenticationReply(object):
 
     def __str__(self):
         return ', '.join([
-            'status: %s' % self.human_status,
+            'data: %s' % self.data,
+            'data_len: %d' % len(self.data),
             'flags: %s' % self.flags,
             'server_msg: %s' % self.server_msg,
-            'data: %s' % self.data
+            'server_msg_len: %d' % len(self.server_msg),
+            'status: %s' % self.human_status
         ])

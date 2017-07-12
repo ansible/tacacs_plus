@@ -11,11 +11,14 @@ from .flags import (
     TAC_PLUS_MAJOR_VER, TAC_PLUS_MINOR_VER, TAC_PLUS_PRIV_LVL_MIN,
     TAC_PLUS_AUTHEN_TYPE_CHAP, TAC_PLUS_MINOR_VER_ONE, TAC_PLUS_AUTHEN_TYPE_PAP,
     TAC_PLUS_AUTHEN, TAC_PLUS_AUTHEN_TYPE_ASCII, TAC_PLUS_AUTHEN_METH_TACACSPLUS,
-    TAC_PLUS_AUTHOR, TAC_PLUS_AUTHOR_STATUS_FAIL, TAC_PLUS_PRIV_LVL_MAX
+    TAC_PLUS_AUTHOR, TAC_PLUS_AUTHOR_STATUS_FAIL, TAC_PLUS_PRIV_LVL_MAX,
+    TAC_PLUS_ACCT, TAC_PLUS_VIRTUAL_REM_ADDR, TAC_PLUS_VIRTUAL_PORT,
+    TAC_PLUS_AUTHEN_STATUS_FAIL, TAC_PLUS_CONTINUE_FLAG_ABORT
 )
 from .packet import TACACSPacket, TACACSHeader
 from .authentication import TACACSAuthenticationStart, TACACSAuthenticationContinue, TACACSAuthenticationReply
 from .authorization import TACACSAuthorizationStart, TACACSAuthorizationReply
+from .accounting import TACACSAccountingStart, TACACSAccountingReply
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +63,7 @@ class TACACSClient(object):
 
     @property
     def sock(self):
-        if not self._sock:
+        if not self._sock:  # pragma: nocover
             conn = (self.host, self.port)
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.setblocking(1)
@@ -83,7 +86,9 @@ class TACACSClient(object):
         Send a TACACS+ message body
 
         :param body:     packed bytes, i.e., `struct.pack(...)
-        :param req_type: TAC_PLUS_AUTHEN /  TAC_PLUS_AUTHOR
+        :param req_type: TAC_PLUS_AUTHEN,
+                         TAC_PLUS_AUTHOR,
+                         TAC_PLUS_ACCT
         :param seq_no:   The sequence number of the current packet.  The
                          first packet in a session MUST have the sequence
                          number 1 and each subsequent packet will increment
@@ -123,10 +128,10 @@ class TACACSClient(object):
                 resp_header.type != header.type,
                 resp_header.session_id != header.session_id
             ]):
-                logger.debug('\n'.join([
+                logger.error('\n'.join([
                     resp_header.__class__.__name__,
                     'recv header <%s>' % resp_header,
-                    resp_header.packed
+                    str(resp_header.packed)
                 ]))
                 raise socket.error
 
@@ -145,7 +150,8 @@ class TACACSClient(object):
 
     def authenticate(self, username, password, priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
                      authen_type=TAC_PLUS_AUTHEN_TYPE_ASCII,
-                     chap_ppp_id=None, chap_challenge=None):
+                     chap_ppp_id=None, chap_challenge=None,
+                     rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR, port=TAC_PLUS_VIRTUAL_PORT):
         """
         Authenticate to a TACACS+ server with a username and password.
 
@@ -157,6 +163,8 @@ class TACACSClient(object):
                                TAC_PLUS_AUTHEN_TYPE_CHAP
         :param chap_ppp_id:    PPP ID when authen_type == 'chap'
         :param chap_challenge: challenge value when authen_type == 'chap'
+        :param rem_addr:       AAA request source, default to TAC_PLUS_VIRTUAL_REM_ADDR
+        :param port:           AAA port, default to TAC_PLUS_VIRTUAL_PORT
         :return:               TACACSAuthenticationReply
         :raises:               socket.timeout, socket.error
         """
@@ -183,7 +191,7 @@ class TACACSClient(object):
         with self.closing():
             packet = self.send(
                 TACACSAuthenticationStart(username, authen_type, priv_lvl,
-                                          start_data),
+                                          start_data, rem_addr=rem_addr, port=port),
                 TAC_PLUS_AUTHEN
             )
             reply = TACACSAuthenticationReply.unpacked(packet.body)
@@ -202,11 +210,14 @@ class TACACSClient(object):
                     'recv header <%s>' % packet.header,
                     'recv body <%s>' % reply
                 ]))
+                if reply.flags == TAC_PLUS_CONTINUE_FLAG_ABORT:
+                    reply.status = TAC_PLUS_AUTHEN_STATUS_FAIL
+
         return reply
 
     def authorize(self, username, arguments=[],
-                  authen_type=TAC_PLUS_AUTHEN_TYPE_ASCII,
-                  priv_lvl=TAC_PLUS_PRIV_LVL_MIN):
+                  authen_type=TAC_PLUS_AUTHEN_TYPE_ASCII, priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
+                  rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR, port=TAC_PLUS_VIRTUAL_PORT):
         """
         Authorize with a TACACS+ server.
 
@@ -217,6 +228,8 @@ class TACACSClient(object):
                                TAC_PLUS_AUTHEN_TYPE_PAP,
                                TAC_PLUS_AUTHEN_TYPE_CHAP
         :param priv_lvl:       Minimal Required priv_lvl.
+        :param rem_addr:       AAA request source, default to TAC_PLUS_VIRTUAL_REM_ADDR
+        :param port:           AAA port, default to TAC_PLUS_VIRTUAL_PORT
         :return:               TACACSAuthenticationReply
         :raises:               socket.timeout, socket.error
         """
@@ -224,7 +237,8 @@ class TACACSClient(object):
             packet = self.send(
                 TACACSAuthorizationStart(username,
                                          TAC_PLUS_AUTHEN_METH_TACACSPLUS,
-                                         priv_lvl, authen_type, arguments),
+                                         priv_lvl, authen_type, arguments,
+                                         rem_addr=rem_addr, port=port),
                 TAC_PLUS_AUTHOR
             )
             reply = TACACSAuthorizationReply.unpacked(packet.body)
@@ -234,13 +248,49 @@ class TACACSClient(object):
                 'recv body <%s>' % reply
             ]))
 
-        reply_arguments = dict([
-            arg.split('=', 1)
-            for arg in reply.arguments or []
-            if arg.find('=') > -1]
-        )
-        user_priv_lvl = int(reply_arguments.get(
-            'priv-lvl', TAC_PLUS_PRIV_LVL_MAX))
-        if user_priv_lvl < priv_lvl:
-            reply.status = TAC_PLUS_AUTHOR_STATUS_FAIL
+            reply_arguments = dict([
+                arg.split('=', 1)
+                for arg in reply.arguments or []
+                if arg.find('=') > -1]
+            )
+            user_priv_lvl = int(reply_arguments.get(
+                'priv-lvl', TAC_PLUS_PRIV_LVL_MAX))
+            if user_priv_lvl < priv_lvl:
+                reply.status = TAC_PLUS_AUTHOR_STATUS_FAIL
+        return reply
+
+    def account(self, username, flags, arguments=[],
+                authen_type=TAC_PLUS_AUTHEN_TYPE_ASCII, priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
+                rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR, port=TAC_PLUS_VIRTUAL_PORT):
+        """
+        Account with a TACACS+ server.
+
+        :param username:
+        :param flags:          TAC_PLUS_ACCT_FLAG_START,
+                               TAC_PLUS_ACCT_FLAG_WATCHDOG,
+                               TAC_PLUS_ACCT_FLAG_STOP
+        :param arguments:      The authorization arguments
+        :param authen_type:    TAC_PLUS_AUTHEN_TYPE_ASCII,
+                               TAC_PLUS_AUTHEN_TYPE_PAP,
+                               TAC_PLUS_AUTHEN_TYPE_CHAP
+        :param priv_lvl:       Minimal Required priv_lvl.
+        :param rem_addr:       AAA request source, default to TAC_PLUS_VIRTUAL_REM_ADDR
+        :param port:           AAA port, default to TAC_PLUS_VIRTUAL_PORT
+        :return:               TACACSAccountingReply
+        :raises:               socket.timeout, socket.error
+        """
+        with self.closing():
+            packet = self.send(
+                TACACSAccountingStart(username, flags,
+                                      TAC_PLUS_AUTHEN_METH_TACACSPLUS,
+                                      priv_lvl, authen_type, arguments,
+                                      rem_addr=rem_addr, port=port),
+                TAC_PLUS_ACCT
+            )
+            reply = TACACSAccountingReply.unpacked(packet.body)
+            logger.debug('\n'.join([
+                reply.__class__.__name__,
+                'recv header <%s>' % packet.header,
+                'recv body <%s>' % reply
+            ]))
         return reply

@@ -11,16 +11,23 @@ import six
 
 from tacacs_plus.flags import (
     TAC_PLUS_AUTHEN, TAC_PLUS_AUTHEN_TYPE_ASCII,
-    TAC_PLUS_AUTHEN_TYPE_PAP, TAC_PLUS_AUTHEN_TYPE_CHAP
+    TAC_PLUS_AUTHEN_TYPE_PAP, TAC_PLUS_AUTHEN_TYPE_CHAP,
+    TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_AUTHEN_METH_TACACSPLUS,
+    TAC_PLUS_ACCT_FLAG_START
 )
 from tacacs_plus.packet import TACACSHeader, TACACSPacket, crypt
 from tacacs_plus.authentication import (
     TACACSAuthenticationStart, TACACSAuthenticationContinue, TACACSAuthenticationReply
 )
+from tacacs_plus.authorization import TACACSAuthorizationStart, TACACSAuthorizationReply
+from tacacs_plus.accounting import TACACSAccountingStart, TACACSAccountingReply
 from tacacs_plus.client import TACACSClient
 
-AUTH_HEADER = six.b('\xc0\x01\x01\x00\x00\x0009\x00\x00\x00')
-AUTH_HEADER_V12_1 = six.b('\xc1\x01\x01\x00\x00\x0009\x00\x00\x00')
+AUTHENTICATE_HEADER = six.b('\xc0\x01\x01\x00\x00\x0009\x00\x00\x00')
+AUTHENTICATE_HEADER_V12_1 = six.b('\xc1\x01\x01\x00\x00\x0009\x00\x00\x00')
+AUTHENTICATE_HEADER_WRONG = six.b('\xf0\x01\x01\x00\x00\x0009\x00\x00\x00')
+AUTHORIZE_HEADER = six.b('\xc0\x02\x01\x00\x00\x0009\x00\x00\x00')
+ACCOUNT_HEADER = six.b('\xc0\x03\x01\x00\x00\x0009\x00\x00\x00')
 
 
 @pytest.fixture
@@ -117,26 +124,29 @@ def test_header_pack(tacacs_header):
     assert unpacked.flags == 0
 
 
-def test_auth_start_pack():
+# test authentication objects
+def test_authentication_start_pack():
     username = 'user123'
     packed = TACACSAuthenticationStart(
         username,
         TAC_PLUS_AUTHEN_TYPE_ASCII
     ).packed
     assert packed == six.b(
-        '\x01'  # tacacs_plus.TAC_PLUS_AUTHEN_LOGIN \
-        '\x00'  # tacacs_plus.TAC_PLUS_PRIV_LVL_MIN \
-        '\x01'  # tacacs_plus.TAC_PLUS_AUTHEN_TYPE_ASCII \
-        '\x01'  # tacacs_plus.TAC_PLUS_AUTHEN_SVC_LOGIN \
-        '\x07'  # username len == 7 \
-        '\x00'  # port_len \
-        '\x00'  # rem_addr_len \
-        '\x00'  # data_len \
-        'user123'
+        '\x01'           # tacacs_plus.flags.TAC_PLUS_AUTHEN_LOGIN \
+        '\x00'           # tacacs_plus.flags.TAC_PLUS_PRIV_LVL_MIN \
+        '\x01'           # tacacs_plus.flags.TAC_PLUS_AUTHEN_TYPE_ASCII \
+        '\x01'           # tacacs_plus.flags.TAC_PLUS_AUTHEN_SVC_LOGIN \
+        '\x07'           # username_len == 7 \
+        '\x0b'           # port_len == 11 \
+        '\x0d'           # rem_addr_len == 13 \
+        '\x00'           # data_len == 0 \
+        'user123'        # username \
+        'python_tty0'    # port \
+        'python_device'  # rem_addr
     )
 
 
-def test_auth_continue_pack():
+def test_authentication_continue_pack():
     password = 'password'
     packed = TACACSAuthenticationContinue(password).packed
     assert packed == six.b(
@@ -152,13 +162,13 @@ def test_auth_continue_pack():
     (six.b('\x02\x00\x00\x00\x00\x00'), 'invalid', 'FAIL',),
     (six.b('\x07\x00\x00\x00\x00\x00'), 'error', 'ERROR'),
 ])
-def test_auth_reply_unpack(raw, state, human_status):
+def test_authentication_reply_unpack(raw, state, human_status):
     reply = TACACSAuthenticationReply.unpacked(raw)
     assert getattr(reply, state) is True
     assert reply.human_status == human_status
 
 
-def test_auth_reply_unpack_server_msg():
+def test_authentication_reply_unpack_server_msg():
     reply = TACACSAuthenticationReply.unpacked(
         six.b('\x05\x01\x00\n\x00\x00Password: ')
     )
@@ -167,13 +177,137 @@ def test_auth_reply_unpack_server_msg():
     assert reply.human_status == 'GETPASS'
 
 
+# test authorization objects
+def test_authorization_start_pack():
+    username = 'user123'
+    packed = TACACSAuthorizationStart(
+        username, TAC_PLUS_AUTHEN_METH_TACACSPLUS,
+        TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_AUTHEN_TYPE_ASCII,
+        [b"service=shell", b"cmd=show", b"cmdargs=version"],
+    ).packed
+    assert packed == six.b(
+        '\x06'              # tacacs_plus.flags.TAC_PLUS_AUTHEN_METH_TACACSPLUS \
+        '\x00'              # tacacs_plus.flags.TAC_PLUS_PRIV_LVL_MIN \
+        '\x01'              # tacacs_plus.flags.TAC_PLUS_AUTHEN_TYPE_ASCII \
+        '\x01'              # tacacs_plus.flags.TAC_PLUS_AUTHEN_SVC_LOGIN \
+        '\x07'              # username_len == 7 \
+        '\x0b'              # port_len == 11 \
+        '\x0d'              # rem_addr_len == 13 \
+        '\x03'              # arg_len == 3
+        '\x0d'              # arg_1_len == 13 (service=shell) \
+        '\x08'              # arg_2_len == 8 (cmd=show) \
+        '\x0f'              # arg_3_len == 14 (cmdargs=version) \
+        'user123'           # username \
+        'python_tty0'       # port \
+        'python_device'     # rem_addr \
+        'service=shell'     # arg_1 (service=shell) \
+        'cmd=show'          # arg_2 (cmd=show) \
+        'cmdargs=version'   # arg_3 (cmdargs=version)
+    )
+
+
+@pytest.mark.parametrize('raw, state, human_status', [
+    (six.b('\x01\x00\x00\x00\x00\x00'), 'valid', 'PASS'),
+    (six.b('\x02\x00\x00\x00\x00\x00'), 'reply', 'REPL'),
+    (six.b('\x10\x00\x00\x00\x00\x00'), 'invalid', 'FAIL',),
+    (six.b('\x11\x00\x00\x00\x00\x00'), 'error', 'ERROR'),
+    (six.b('\x21\x00\x00\x00\x00\x00'), 'follow', 'FOLLOW'),
+])
+def test_authorization_reply_unpack(raw, state, human_status):
+    reply = TACACSAuthorizationReply.unpacked(raw)
+    assert getattr(reply, state) is True
+    assert reply.human_status == human_status
+
+
+def test_authorization_reply_unpack_server_msg():
+    reply = TACACSAuthorizationReply.unpacked(
+        six.b('\x01\x00\x08\x00\x00\x00amessage')
+    )
+    assert reply.server_msg == six.b('amessage')
+    assert 'amessage' in str(reply)
+
+
+def test_authorization_reply_unpack_data():
+    reply = TACACSAuthorizationReply.unpacked(
+        six.b('\x01\x00\x00\x00\x08\x00adata')
+    )
+    assert reply.data == six.b('adata')
+    assert 'adata' in str(reply)
+
+
+def test_authorization_reply_unpack_args():
+    reply = TACACSAuthorizationReply.unpacked(
+        six.b('\x01\x02\x00\x00\x00\x00\x04\x04arg1arg2')
+    )
+    assert reply.arg_cnt == 2
+    assert reply.arguments == [b'arg1', b'arg2']
+
+
+# test accounting object
+def test_accounting_start_pack():
+    username = 'user123'
+    packed = TACACSAccountingStart(
+        username, TAC_PLUS_ACCT_FLAG_START, TAC_PLUS_AUTHEN_METH_TACACSPLUS,
+        TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_AUTHEN_TYPE_ASCII,
+        [b"service=shell", b"cmd=show", b"cmdargs=version"],
+    ).packed
+    assert packed == six.b(
+        '\x02'
+        '\x06'              # tacacs_plus.flags.TAC_PLUS_AUTHEN_METH_TACACSPLUS \
+        '\x00'              # tacacs_plus.flags.TAC_PLUS_PRIV_LVL_MIN \
+        '\x01'              # tacacs_plus.flags.TAC_PLUS_AUTHEN_TYPE_ASCII \
+        '\x01'              # tacacs_plus.flags.TAC_PLUS_AUTHEN_SVC_LOGIN \
+        '\x07'              # username_len == 7 \
+        '\x0b'              # port_len == 11 \
+        '\x0d'              # rem_addr_len == 13 \
+        '\x03'              # arg_len == 3
+        '\x0d'              # arg_1_len == 13 (service=shell) \
+        '\x08'              # arg_2_len == 8 (cmd=show) \
+        '\x0f'              # arg_3_len == 14 (cmdargs=version) \
+        'user123'           # username \
+        'python_tty0'       # port \
+        'python_device'     # rem_addr \
+        'service=shell'     # arg_1 (service=shell) \
+        'cmd=show'          # arg_2 (cmd=show) \
+        'cmdargs=version'   # arg_3 (cmdargs=version)
+    )
+
+
+@pytest.mark.parametrize('raw, state, human_status', [
+    (six.b('\x00\x00\x00\x00\x01\x00\x00'), 'valid', 'SUCCESS'),
+    (six.b('\x00\x00\x00\x00\x02\x00\x00'), 'error', 'ERROR'),
+    (six.b('\x00\x00\x00\x00\x21\x00\x00'), 'follow', 'FOLLOW'),
+])
+def test_accounting_reply_unpack(raw, state, human_status):
+    reply = TACACSAccountingReply.unpacked(raw)
+    assert getattr(reply, state) is True
+    assert reply.human_status == human_status
+
+
+def test_accounting_reply_unpack_server_msg():
+    reply = TACACSAccountingReply.unpacked(
+        six.b('\x08\x00\x00\x00\x01amessage')
+    )
+    assert reply.server_msg == six.b('amessage')
+    assert 'amessage' in str(reply)
+
+
+def test_accounting_reply_unpack_data():
+    reply = TACACSAccountingReply.unpacked(
+        six.b('\x00\x00\x08\x00\x01adata')
+    )
+    assert reply.data == six.b('adata')
+    assert 'adata' in str(reply)
+
+
+# test client send
 @pytest.mark.parametrize(
     'packets, state',
     [
-        [AUTH_HEADER + six.b('\x06\x01\x00\x00\x00\x00\x00'), 'valid'],
-        [AUTH_HEADER + six.b('\x06\x02\x00\x00\x00\x00\x00'), 'invalid'],
-        [AUTH_HEADER + six.b('\x10\x05\x01\x00\n\x00\x00Password: '), 'getpass'],  # noqa
-        [AUTH_HEADER + six.b('\x06\x07\x00\x00\x00\x00\x00'), 'error'],
+        [AUTHENTICATE_HEADER + six.b('\x06\x01\x00\x00\x00\x00\x00'), 'valid'],
+        [AUTHENTICATE_HEADER + six.b('\x06\x02\x00\x00\x00\x00\x00'), 'invalid'],
+        [AUTHENTICATE_HEADER + six.b('\x10\x05\x01\x00\n\x00\x00Password: '), 'getpass'],  # noqa
+        [AUTHENTICATE_HEADER + six.b('\x06\x07\x00\x00\x00\x00\x00'), 'error'],
     ]
 )
 def test_client_socket_send(fake_socket, packets, state):
@@ -201,9 +335,25 @@ def test_client_socket_send(fake_socket, packets, state):
 
 @pytest.mark.parametrize(
     'packets',
+    [AUTHENTICATE_HEADER_WRONG + six.b('\x06\x07\x00\x00\x00\x00\x00')]
+)
+def test_client_socket_send_wrong_headers(fake_socket, packets):
+    body = TACACSAuthenticationStart(
+        'user123',
+        TAC_PLUS_AUTHEN_TYPE_ASCII
+    )
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client._sock = fake_socket
+    with pytest.raises(socket.error):
+        client.send(body, TAC_PLUS_AUTHEN)
+
+
+# test client.authenticate
+@pytest.mark.parametrize(
+    'packets',
     [
-        AUTH_HEADER + six.b('\x10\x05\x01\x00\n\x00\x00Password: ') +  # noqa getpass
-        AUTH_HEADER + six.b('\x06\x01\x00\x00\x00\x00\x00')  # auth_valid
+        AUTHENTICATE_HEADER + six.b('\x10\x05\x01\x00\n\x00\x00Password: ') +  # noqa getpass
+        AUTHENTICATE_HEADER + six.b('\x06\x01\x00\x00\x00\x00\x00')  # auth_valid
     ]
 )
 def test_authenticate_ascii(fake_socket, packets):
@@ -237,7 +387,7 @@ def test_authenticate_ascii(fake_socket, packets):
 
 @pytest.mark.parametrize(
     'packets',
-    [AUTH_HEADER_V12_1 + six.b('\x06\x01\x00\x00\x00\x00\x00')]  # auth_valid
+    [AUTHENTICATE_HEADER_V12_1 + six.b('\x06\x01\x00\x00\x00\x00\x00')]  # auth_valid
 )
 def test_authenticate_pap(fake_socket, packets):
     """
@@ -263,7 +413,7 @@ def test_authenticate_pap(fake_socket, packets):
 
 @pytest.mark.parametrize(
     'packets',
-    [AUTH_HEADER_V12_1 + six.b('\x06\x01\x00\x00\x00\x00\x00')]  # auth_valid
+    [AUTHENTICATE_HEADER_V12_1 + six.b('\x06\x01\x00\x00\x00\x00\x00')]  # auth_valid
 )
 def test_authenticate_chap(fake_socket, packets):
     """
@@ -307,3 +457,96 @@ def test_authenticate_chap_challenge_required():
         client.authenticate('username', 'pass',
                             authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
                             chap_ppp_id='X')
+
+
+# test client.authorize
+@pytest.mark.parametrize(
+    'packets',
+    [
+        AUTHORIZE_HEADER + six.b('\x06\x01\x00\x00\x00\x00\x00')
+    ]
+)
+def test_authorize_ascii(fake_socket, packets):
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client._sock = fake_socket
+    reply = client.authorize('username', arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"])
+    assert reply.valid
+
+    fake_socket.buff.seek(0)
+    first_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
+    assert (first_header.version_max, first_header.version_min) == (12, 0)
+    first_body = fake_socket.buff.read(first_header.length)
+    assert TACACSAuthorizationStart(
+        'username', TAC_PLUS_AUTHEN_METH_TACACSPLUS, TAC_PLUS_PRIV_LVL_MIN,
+        TAC_PLUS_AUTHEN_TYPE_ASCII, [b"service=shell", b"cmd=show", b"cmdargs=version"],
+    ).packed == first_body
+
+
+@pytest.mark.parametrize(
+    'packets',
+    [
+        AUTHORIZE_HEADER + six.b('\x06\x01\x00\x00\x00\x00\x00')
+    ]
+)
+def test_authorize_pap(fake_socket, packets):
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client._sock = fake_socket
+    reply = client.authorize('username', arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"],
+                             authen_type=TAC_PLUS_AUTHEN_TYPE_PAP)
+    assert reply.valid
+
+    fake_socket.buff.seek(0)
+    first_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
+    assert (first_header.version_max, first_header.version_min) == (12, 0)
+    first_body = fake_socket.buff.read(first_header.length)
+    assert TACACSAuthorizationStart(
+        'username', TAC_PLUS_AUTHEN_METH_TACACSPLUS, TAC_PLUS_PRIV_LVL_MIN,
+        TAC_PLUS_AUTHEN_TYPE_PAP, [b"service=shell", b"cmd=show", b"cmdargs=version"],
+    ).packed == first_body
+
+
+@pytest.mark.parametrize(
+    'packets',
+    [
+        AUTHORIZE_HEADER + six.b('\x06\x01\x00\x00\x00\x00\x00')
+    ]
+)
+def test_authorize_chap(fake_socket, packets):
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client._sock = fake_socket
+    reply = client.authorize('username', arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"],
+                             authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP)
+    assert reply.valid
+
+    fake_socket.buff.seek(0)
+    first_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
+    assert (first_header.version_max, first_header.version_min) == (12, 0)
+    first_body = fake_socket.buff.read(first_header.length)
+    assert TACACSAuthorizationStart(
+        'username', TAC_PLUS_AUTHEN_METH_TACACSPLUS, TAC_PLUS_PRIV_LVL_MIN,
+        TAC_PLUS_AUTHEN_TYPE_CHAP, [b"service=shell", b"cmd=show", b"cmdargs=version"],
+    ).packed == first_body
+
+
+# test client.account
+@pytest.mark.parametrize(
+    'packets',
+    [
+        ACCOUNT_HEADER + six.b('\x06\x00\x00\x00\x00\x01\x00\x00')
+    ]
+)
+def test_account_start(fake_socket, packets):
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client._sock = fake_socket
+    reply = client.account('username', TAC_PLUS_ACCT_FLAG_START,
+                           arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"])
+    assert reply.valid
+
+    fake_socket.buff.seek(0)
+    first_header = TACACSHeader.unpacked(fake_socket.buff.read(12))
+    assert (first_header.version_max, first_header.version_min) == (12, 0)
+    first_body = fake_socket.buff.read(first_header.length)
+    assert TACACSAccountingStart(
+        'username', TAC_PLUS_ACCT_FLAG_START, TAC_PLUS_AUTHEN_METH_TACACSPLUS, TAC_PLUS_PRIV_LVL_MIN,
+        TAC_PLUS_AUTHEN_TYPE_ASCII, [b"service=shell", b"cmd=show", b"cmdargs=version"],
+    ).packed == first_body

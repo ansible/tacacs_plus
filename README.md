@@ -22,7 +22,7 @@ $ tacacs_plus authenticate username localhost --port 49
 $ tacacs_plus authenticate username localhost --port 49 --authen_type=pap
 $ tacacs_plus authenticate username localhost --port 49 --authen_type=chap
 
-$ tacas_plus -h
+$ tacacs_plus -h
 usage: tacacs_plus [-h] [--port PORT] [--authen_type {pap,chap,ascii}]
                    [--timeout TIMEOUT] [--debug]
                    {authenticate} username host

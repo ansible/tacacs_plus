@@ -97,6 +97,7 @@ class TACACSAuthorizationReply(object):
         self.server_msg = server_msg
         self.data = data
         self.arguments = arguments
+        self.flags = None
 
     @classmethod
     def unpacked(cls, raw):
@@ -128,10 +129,10 @@ class TACACSAuthorizationReply(object):
             'B' * arg_cnt, raw.read(arg_cnt)
         ) if arg_cnt else []
         server_msg = raw.read(server_msg_len)
-        data = raw.read(data_len) if data_len else ''
+        data = raw.read(data_len) if data_len else b''
         arguments = []
         for arg_len in args_lens:
-            arg = raw.read(arg_len) if arg_len else ''
+            arg = raw.read(arg_len) if arg_len else b''
             arguments.append(arg)
         return cls(status, arg_cnt, server_msg, data, arguments)
 
@@ -166,8 +167,9 @@ class TACACSAuthorizationReply(object):
         }.get(self.status, 'UNKNOWN: %s' % self.status)
 
     def __str__(self):
+        args = ', '.join([x.decode('utf-8') for x in self.arguments])
         return ', '.join([
-            'args: %s' % ','.join(self.arguments),
+            'args: %s' % args,
             'args_cnt: %d' % len(self.arguments),
             'data: %s' % self.data,
             'data_len: %d' % len(self.data),

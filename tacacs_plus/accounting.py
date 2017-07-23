@@ -73,8 +73,9 @@ class TACACSAccountingStart(object):
         return body
 
     def __str__(self):
+        args = ', '.join([x.decode('utf-8') for x in self.arguments])
         return ', '.join([
-            'args: %s' % b','.join(self.arguments),
+            'args: %s' % args,
             'args_cnt: %d' % len(self.arguments),
             'authen_method: %s' % self.authen_method,
             'authen_type: %s' % self.authen_type,
@@ -94,6 +95,8 @@ class TACACSAccountingReply(object):
         self.status = status
         self.server_msg = server_msg
         self.data = data
+        self.flags = None
+        self.arguments = []
 
     @classmethod
     def unpacked(cls, raw):
@@ -112,7 +115,7 @@ class TACACSAccountingReply(object):
         server_msg_len, data_len = struct.unpack('!HH', raw.read(4))
         status = struct.unpack('B', raw.read(1))[0]
         server_msg = raw.read(server_msg_len)
-        data = raw.read(data_len)
+        data = raw.read(data_len) if data_len else b''
         return cls(status, server_msg, data)
 
     @property

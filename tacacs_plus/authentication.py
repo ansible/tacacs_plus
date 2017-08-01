@@ -126,6 +126,7 @@ class TACACSAuthenticationReply(object):
         self.flags = flags
         self.server_msg = server_msg
         self.data = data
+        self.arguments = []
 
     @classmethod
     def unpacked(cls, raw):

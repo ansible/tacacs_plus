@@ -18,28 +18,91 @@ operating systems.
 ```
 $ pip install tacacs_plus
 
-$ tacacs_plus authenticate username localhost --port 49
-$ tacacs_plus authenticate username localhost --port 49 --authen_type=pap
-$ tacacs_plus authenticate username localhost --port 49 --authen_type=chap
+$ tacacs_client -u myuser -H localhost authenticate
+$ tacacs_client -u myuser -H localhost authenticate -t pap
+$ tacacs_client -u myuser -H localhost -v authenticate -t chap
+status: PASS
 
-$ tacacs_plus -h
-usage: tacacs_plus [-h] [--port PORT] [--authen_type {pap,chap,ascii}]
-                   [--timeout TIMEOUT] [--debug]
-                   {authenticate} username host
+$ tacacs_client -u myuser -H localhost authorize -c service=shell cmd=show cmdarg=version
+$ tacacs_client -u myuser -H localhost -v authorize -t pap -c service=shell cmd=show cmdarg=version
+status: PASS
 
-simple tacacs+ auth client
+$ tacacs_client -u myuser -H localhost -v authorize -t pap -c service=junos-exec
+status: REPL
+av-pairs:
+    allow-commands=^acommandregex$
+    deny-commands=^anothercommandregex$
+
+$ tacacs_client -u myuser -H localhost account -f start -c service=shell cmd=show cmdarg=version
+$ tacacs_client -u myuser -H localhost account -f stop -c service=shell cmd=show cmdarg=version
+
+$ tacacs_client -h
+usage: tacacs_client [-h] -u USERNAME -H HOST [-p PORT] [-l PRIV_LVL]
+                     [-t {ascii,pap,chap}] [-r REM_ADDR] [-P VIRTUAL_PORT]
+                     [--timeout TIMEOUT] [-d] [-v] [-k KEY]
+                     {authenticate,authorize,account} ...
+
+        Tacacs+ client with full AAA support:
+
+            * Authentication supports both ascii, pap and chap.
+            * Authorization supports AV pairs and single commands.
+            * Accounting support AV pairs and single commands.
+
+        NOTE: shared encryption key can be set via environment variable TACACS_PLUS_KEY or via argument.
+        NOTE: user password can be setup via environment variable TACACS_PLUS_PWD or via argument.
+
 
 positional arguments:
-  {authenticate}
-  username
-  host
+  {authenticate,authorize,account}
+                        action to perform over the tacacs+ server
+    authenticate        authenticate against a tacacs+ server
+    authorize           authorize a command against a tacacs+ server
+    account             account commands with accounting flags against a tacacs+ server
 
 optional arguments:
   -h, --help            show this help message and exit
-  --port PORT, -p PORT
-  --authen_type {pap,chap,ascii}
+  -u USERNAME, --username USERNAME
+                        user name
+  -H HOST, --host HOST  tacacs+ server address
+  -p PORT, --port PORT  tacacs+ server port (default 49)
+  -l PRIV_LVL, --priv-lvl PRIV_LVL
+                        user privilege level
+  -t {ascii,pap,chap}, --authen-type {ascii,pap,chap}
+                        authentication type
+  -r REM_ADDR, --rem-addr REM_ADDR
+                        remote address (logged by tacacs server)
+  -P VIRTUAL_PORT, --virtual-port VIRTUAL_PORT
+                        console port used in connection (logged by tacacs server)
   --timeout TIMEOUT
-  --debug
+  -d, --debug           enable debugging output
+  -v, --verbose         print responses
+  -k KEY, --key KEY     tacacs+ shared encryption key
+
+$ tacacs_client authenticate -h
+usage: tacacs_client authenticate [-h] [-p PASSWORD]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PASSWORD, --password PASSWORD
+                        user password
+
+$ tacacs_client authorize -h
+usage: tacacs_client authorize [-h] -c CMDS [CMDS ...]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CMDS [CMDS ...], --cmds CMDS [CMDS ...]
+                        list of cmds to authorize
+
+$ tacacs_client account -h
+usage: tacacs_client account [-h] -c CMDS [CMDS ...] -f {start,stop,update}
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CMDS [CMDS ...], --cmds CMDS [CMDS ...]
+                        list of cmds to authorize
+  -f {start,stop,update}, --flag {start,stop,update}
+                        accounting flag
 ```
 
 ### Programmatic Usage

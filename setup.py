@@ -36,6 +36,6 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'pytest-cov'],
     include_package_data=True,
-    scripts=['bin/tacacs_plus'],
+    scripts=['bin/tacacs_client'],
     zip_safe=False
 )

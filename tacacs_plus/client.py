@@ -247,11 +247,10 @@ class TACACSClient(object):
                 'recv header <%s>' % packet.header,
                 'recv body <%s>' % reply
             ]))
-
             reply_arguments = dict([
-                arg.split('=', 1)
+                arg.split(b'=', 1)
                 for arg in reply.arguments or []
-                if arg.find('=') > -1]
+                if arg.find(b'=') > -1]
             )
             user_priv_lvl = int(reply_arguments.get(
                 'priv-lvl', TAC_PLUS_PRIV_LVL_MAX))

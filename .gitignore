@@ -22,3 +22,5 @@ htmlcov
 
 .cache
 .eggs
+
+docs/_build

@@ -178,8 +178,12 @@ class TACACSClient(object):
             if authen_type == TAC_PLUS_AUTHEN_TYPE_CHAP:
                 if not isinstance(chap_ppp_id, six.string_types):
                     raise ValueError('chap_ppp_id must be a string')
+                if len(chap_ppp_id) != 1:
+                    raise ValueError('chap_ppp_id must be a 1-byte string')
                 if not isinstance(chap_challenge, six.string_types):
                     raise ValueError('chap_challenge must be a string')
+                if len(chap_challenge) > 255:
+                    raise ValueError('chap_challenge may not be more 255 bytes')
                 start_data = (
                     six.b(chap_ppp_id) +
                     six.b(chap_challenge) +

@@ -33,11 +33,11 @@ def crypt(header, body_bytes, secret):
     version, seq_no, MD5_n-1}
 
     :param header:     a TACACSHeader object
-    :param body_bytes: packed bytes, i.e., `struct.pack(...)
+    :param body_bytes: packed bytes, i.e., `struct.pack(...)`
     :param secret:     a key used to encrypt/obfuscate packets according
                        to the TACACS+ spec
 
-    :return:           packed bytes, i.e., `struct.pack(...) representing the
+    :return:           packed bytes, i.e., `struct.pack(...)` representing the
                        obfuscated packet body
     """  # noqa
 
@@ -75,7 +75,7 @@ class TACACSPacket(object):
     def __init__(self, header, body_bytes, secret):
         """
         :param header:     a TACACSHeader object
-        :param body_bytes: packed bytes, i.e., `struct.pack(...)
+        :param body_bytes: packed bytes, i.e., `struct.pack(...)`
         :param secret:     a key used to encrypt/obfuscate packets according
                            to the TACACS+ spec
         """

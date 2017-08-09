@@ -32,8 +32,6 @@ class TACACSClient(object):
     http://www.shrubbery.net/tac_plus/
     """
 
-    _sock = None
-
     def __init__(self, host, port, secret, timeout=10, session_id=None,
                  version_max=TAC_PLUS_MAJOR_VER,
                  version_min=TAC_PLUS_MINOR_VER):
@@ -47,6 +45,7 @@ class TACACSClient(object):
         :param version_max: TACACS+ major version number, 12
         :param version_min: TACACS+ minor version number, 0 or 1
         """
+        self._sock = None
         self.host = host
         self.port = port
         self.secret = secret
@@ -85,7 +84,7 @@ class TACACSClient(object):
         """
         Send a TACACS+ message body
 
-        :param body:     packed bytes, i.e., `struct.pack(...)
+        :param body:     packed bytes, i.e., `struct.pack(...)`
         :param req_type: TAC_PLUS_AUTHEN,
                          TAC_PLUS_AUTHOR,
                          TAC_PLUS_ACCT

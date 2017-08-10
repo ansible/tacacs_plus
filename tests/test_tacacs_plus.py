@@ -451,12 +451,32 @@ def test_authenticate_chap_ppp_id_required():
                             chap_challenge='challenge')
 
 
+def test_authenticate_chap_ppp_id_length():
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    with pytest.raises(ValueError) as e:
+        client.authenticate('username', 'pass',
+                            authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
+                            chap_ppp_id='AA',
+                            chap_challenge='challenge')
+    assert 'chap_ppp_id must be a 1-byte string' in str(e)
+
+
 def test_authenticate_chap_challenge_required():
     client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     with pytest.raises(ValueError):
         client.authenticate('username', 'pass',
                             authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
                             chap_ppp_id='X')
+
+
+def test_authenticate_chap_challenge_length():
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    with pytest.raises(ValueError) as e:
+        client.authenticate('username', 'pass',
+                            authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
+                            chap_ppp_id='A',
+                            chap_challenge='X' * 256)
+    assert 'chap_challenge may not be more 255 bytes' in str(e)
 
 
 # test client.authorize

@@ -251,9 +251,9 @@ class TACACSClient(object):
                 'recv body <%s>' % reply
             ]))
             reply_arguments = dict([
-                arg.split(b'=', 1)
+                arg.split(six.b('='), 1)
                 for arg in reply.arguments or []
-                if arg.find(b'=') > -1]
+                if arg.find(six.b('=')) > -1]
             )
             user_priv_lvl = int(reply_arguments.get(
                 six.b('priv-lvl'), TAC_PLUS_PRIV_LVL_MAX))

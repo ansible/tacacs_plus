@@ -225,7 +225,6 @@ class TACACSClient(object):
         Authorize with a TACACS+ server.
 
         :param username:
-        :param password:
         :param arguments:      The authorization arguments
         :param authen_type:    TAC_PLUS_AUTHEN_TYPE_ASCII,
                                TAC_PLUS_AUTHEN_TYPE_PAP,

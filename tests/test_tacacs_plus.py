@@ -12,7 +12,8 @@ import six
 from tacacs_plus.flags import (
     TAC_PLUS_AUTHEN, TAC_PLUS_AUTHEN_TYPE_ASCII,
     TAC_PLUS_AUTHEN_TYPE_PAP, TAC_PLUS_AUTHEN_TYPE_CHAP,
-    TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_AUTHEN_METH_TACACSPLUS,
+    TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_PRIV_LVL_MAX,
+    TAC_PLUS_AUTHEN_METH_TACACSPLUS,
     TAC_PLUS_ACCT_FLAG_START
 )
 from tacacs_plus.packet import TACACSHeader, TACACSPacket, crypt
@@ -570,3 +571,31 @@ def test_account_start(fake_socket, packets):
         'username', TAC_PLUS_ACCT_FLAG_START, TAC_PLUS_AUTHEN_METH_TACACSPLUS, TAC_PLUS_PRIV_LVL_MIN,
         TAC_PLUS_AUTHEN_TYPE_ASCII, [b"service=shell", b"cmd=show", b"cmdargs=version"],
     ).packed == first_body
+
+
+@pytest.mark.parametrize(
+    'packets',
+    [
+        AUTHORIZE_HEADER + six.b('\x12\x01\x01\x00\x00\x00\x00\x0bpriv-lvl=15')
+    ]
+)
+def test_authorize_equal_priv_lvl(fake_socket, packets):
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client._sock = fake_socket
+    reply = client.authorize('username', arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"],
+                             authen_type=TAC_PLUS_AUTHEN_TYPE_PAP, priv_lvl=TAC_PLUS_PRIV_LVL_MAX)
+    assert reply.valid, "the privilege level sent by the server is equal to the requested one (15)"
+
+
+@pytest.mark.parametrize(
+    'packets',
+    [
+        AUTHORIZE_HEADER + six.b('\x11\x01\x01\x00\x00\x00\x00\x0bpriv-lvl=1')
+    ]
+)
+def test_authorize_lesser_priv_lvl(fake_socket, packets):
+    client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
+    client._sock = fake_socket
+    reply = client.authorize('username', arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"],
+                             authen_type=TAC_PLUS_AUTHEN_TYPE_PAP, priv_lvl=TAC_PLUS_PRIV_LVL_MAX)
+    assert not reply.valid, "the privilege level sent by the server is less than the requested one (1 < 15)"

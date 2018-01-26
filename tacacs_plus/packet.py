@@ -157,12 +157,18 @@ class TACACSHeader(object):
         # B = unsigned char
         # !I = network-order (big-endian) unsigned int
         raw = six.BytesIO(raw)
-        version, type, seq_no, flags = struct.unpack(
-            'BBBB',
-            raw.read(4)
-        )
-        session_id, length = struct.unpack('!II', raw.read(8))
-        return cls(version, type, session_id, length, seq_no, flags)
+        raw_chars = raw.read(4)
+        if raw_chars:
+            version, type, seq_no, flags = struct.unpack(
+                'BBBB',
+                raw_chars
+            )
+            session_id, length = struct.unpack('!II', raw.read(8))
+            return cls(version, type, session_id, length, seq_no, flags)
+        else:
+            raise ValueError(
+                "Unable to extract data from header. Likely the TACACS+ key does not match between server and client"
+            )
 
     def __str__(self):
         return ', '.join([

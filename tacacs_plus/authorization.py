@@ -138,7 +138,10 @@ class TACACSAuthorizationReply(object):
 
     @property
     def valid(self):
-        return self.status == TAC_PLUS_AUTHOR_STATUS_PASS_ADD
+        # authorization response is valid for both states:
+        # * PASS_ADD -> cisco like, per command authorization
+        # * PASS_REPL -> junos like, av-pairs authorization
+        return self.status in (TAC_PLUS_AUTHOR_STATUS_PASS_ADD, TAC_PLUS_AUTHOR_STATUS_PASS_REPL)
 
     @property
     def invalid(self):

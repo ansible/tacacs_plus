@@ -225,7 +225,6 @@ class TACACSClient(object):
         Authorize with a TACACS+ server.
 
         :param username:
-        :param password:
         :param arguments:      The authorization arguments
         :param authen_type:    TAC_PLUS_AUTHEN_TYPE_ASCII,
                                TAC_PLUS_AUTHEN_TYPE_PAP,
@@ -251,12 +250,12 @@ class TACACSClient(object):
                 'recv body <%s>' % reply
             ]))
             reply_arguments = dict([
-                arg.split(b'=', 1)
+                arg.split(six.b('='), 1)
                 for arg in reply.arguments or []
-                if arg.find(b'=') > -1]
+                if arg.find(six.b('=')) > -1]
             )
             user_priv_lvl = int(reply_arguments.get(
-                'priv-lvl', TAC_PLUS_PRIV_LVL_MAX))
+                six.b('priv-lvl'), TAC_PLUS_PRIV_LVL_MAX))
             if user_priv_lvl < priv_lvl:
                 reply.status = TAC_PLUS_AUTHOR_STATUS_FAIL
         return reply

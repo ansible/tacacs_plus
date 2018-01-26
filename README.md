@@ -109,6 +109,8 @@ optional arguments:
 
 ```python
 #!/usr/bin/env python
+from __future__ import print_function
+
 from tacacs_plus.client import TACACSClient
 from tacacs_plus.flags import TAC_PLUS_ACCT_FLAG_START, TAC_PLUS_ACCT_FLAG_WATCHDOG, TAC_PLUS_ACCT_FLAG_STOP
 
@@ -116,21 +118,21 @@ cli = TACACSClient('host', 49, 'secret', timeout=10)
 
 # authenticate user and pass
 authen = cli.authenticate('username', 'password')
-print "PASS!" if authen.valid else "FAIL!"
+print("PASS!" if authen.valid else "FAIL!")
 
 # authorize user and command
 author = cli.authorize('username', arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"])
-print "PASS!" if author.valid else "FAIL!"
+print("PASS!" if author.valid else "FAIL!")
 
 # start accounting session for command
 acct = cli.account('username', TAC_PLUS_ACCT_FLAG_START, arguments=[b"service=shell", b"cmd=show", b"cmdargs=version"])
-print "PASS!" if acct.valid else "FAIL!"
+print("PASS!" if acct.valid else "FAIL!")
 
 # continue accounting session for another command
 acct = cli.account('username', TAC_PLUS_ACCT_FLAG_WATCHDOG, arguments=[b"service=shell", b"cmd=debug", b"cmdargs=aaa"])
-print "PASS!" if acct.valid else "FAIL!"
+print("PASS!" if acct.valid else "FAIL!")
 
 # close accounting session
 acct = cli.account('username', TAC_PLUS_ACCT_FLAG_STOP, arguments=[b"service=shell", b"cmd=exit"])
-print "PASS!" if acct.valid else "FAIL!"
+print("PASS!" if acct.valid else "FAIL!")
 ```

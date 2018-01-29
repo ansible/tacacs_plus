@@ -57,8 +57,12 @@ class TACACSClient(object):
         self.session_id = session_id or random.randint(1, 2 ** 32 - 1)
 
     @property
-    def version(self):
+    def version_strict(self):
         return (self.version_max * 0x10) + self.version_min
+
+    @property
+    def version(self):
+        return self.version_max * 0x10
 
     @property
     def sock(self):
@@ -100,7 +104,7 @@ class TACACSClient(object):
         """
         # construct a packet
         header = TACACSHeader(
-            self.version,
+            self.version_strict,
             req_type,
             self.session_id,
             len(body.packed),

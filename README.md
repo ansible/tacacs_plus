@@ -76,6 +76,7 @@ optional arguments:
   --timeout TIMEOUT
   -d, --debug           enable debugging output
   -v, --verbose         print responses
+  -6, --v6              use IPv6 addresses
   -k KEY, --key KEY     tacacs+ shared encryption key
 
 $ tacacs_client authenticate -h
@@ -113,8 +114,10 @@ from __future__ import print_function
 
 from tacacs_plus.client import TACACSClient
 from tacacs_plus.flags import TAC_PLUS_ACCT_FLAG_START, TAC_PLUS_ACCT_FLAG_WATCHDOG, TAC_PLUS_ACCT_FLAG_STOP
+import socket
 
-cli = TACACSClient('host', 49, 'secret', timeout=10)
+# For IPv6, use `family=socket.AF_INET6`
+cli = TACACSClient('host', 49, 'secret', timeout=10, family=socket.AF_INET)
 
 # authenticate user and pass
 authen = cli.authenticate('username', 'password')

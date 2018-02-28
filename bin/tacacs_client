@@ -148,7 +148,7 @@ def get_cli(args):
     family = socket.AF_INET
     if args.v6:
         family = family = socket.AF_INET6
-    return TACACSClient(args.host, args.port, args.key, timeout=args.timeout,family=family)
+    return TACACSClient(args.host, args.port, args.key, timeout=args.timeout, family=family)
 
 
 def main():

@@ -32,8 +32,8 @@ class TACACSClient(object):
     http://www.shrubbery.net/tac_plus/
     """
 
-    def __init__(self, host, port, secret, timeout=10, session_id=None,family=socket.AF_INET,
-                 version_max=TAC_PLUS_MAJOR_VER,
+    def __init__(self, host, port, secret, timeout=10, session_id=None,
+                 family=socket.AF_INET, version_max=TAC_PLUS_MAJOR_VER,
                  version_min=TAC_PLUS_MINOR_VER):
         """
         :param host:        hostname of the TACACS+ server
@@ -64,13 +64,12 @@ class TACACSClient(object):
     @property
     def sock(self):
         if not self._sock:  # pragma: nocover
+            conn = (self.host, self.port)
             if self.family == socket.AF_INET6:
-                #For AF_INET6 address family, a four-tuple (host, port, flowinfo, scopeid) is used
-                self._sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-                conn = (self.host, self.port,0,0)
-            else:
-                self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                conn = (self.host, self.port)
+                # For AF_INET6 address family, a four-tuple (host, port,
+                # flowinfo, scopeid) is used
+                conn = (self.host, self.port, 0, 0)
+            self._sock = socket.socket(self.family, socket.SOCK_STREAM)
             self._sock.setblocking(1)
             self._sock.settimeout(self.timeout)
             self._sock.connect(conn)

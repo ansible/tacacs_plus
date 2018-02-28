@@ -301,6 +301,16 @@ def test_accounting_reply_unpack_data():
     assert 'adata' in str(reply)
 
 
+@pytest.mark.parametrize('family', [socket.AF_INET, socket.AF_INET6])
+def test_v4_sock(family):
+    try:
+        client = TACACSClient('127.0.0.1', 49, None, family=family)
+        client.sock
+    except socket.error:
+        pass
+    assert client._sock.family == family
+
+
 # test client send
 @pytest.mark.parametrize(
     'packets, state',

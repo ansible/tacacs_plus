@@ -116,9 +116,8 @@ from tacacs_plus.client import TACACSClient
 from tacacs_plus.flags import TAC_PLUS_ACCT_FLAG_START, TAC_PLUS_ACCT_FLAG_WATCHDOG, TAC_PLUS_ACCT_FLAG_STOP
 import socket
 
-#For IPv6 add the family socket.AF_INET6 as family params
-#cli = TACACSClient('host', 49, 'secret', timeout=10, family=socket.AF_INET6)
-cli = TACACSClient('host', 49, 'secret', timeout=10)
+# For IPv6, use `family=socket.AF_INET6`
+cli = TACACSClient('host', 49, 'secret', timeout=10, family=socket.AF_INET)
 
 # authenticate user and pass
 authen = cli.authenticate('username', 'password')

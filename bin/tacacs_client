@@ -45,6 +45,7 @@ def parse_args():
     parser.add_argument('--timeout', type=int, default=10)
     parser.add_argument('-d', '--debug', action='store_true', help="enable debugging output")
     parser.add_argument('-v', '--verbose', action='store_true', help="print responses")
+    parser.add_argument('-6', '--verbose', action='--v6', help="use IPv6 addresses")
 
     if not tacacs_key:
         parser.add_argument('-k', '--key', required=False, help="tacacs+ shared encryption key")
@@ -144,7 +145,10 @@ def account(cli, args):
 def get_cli(args):
     if not args.key:
         args.key = getpass.getpass("tacacs+ shared key: ")
-    return TACACSClient(args.host, args.port, args.key, timeout=args.timeout)
+    family = socket.AF_INET
+    if args.v6:
+        family = family = socket.AF_INET6
+    return TACACSClient(args.host, args.port, args.key, timeout=args.timeout,family=family)
 
 
 def main():

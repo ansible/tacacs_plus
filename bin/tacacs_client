@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import socket
 import sys
 import getpass
 import logging
@@ -10,7 +11,7 @@ import six
 from tacacs_plus.client import TACACSClient
 from tacacs_plus.flags import (
     TAC_PLUS_AUTHEN_TYPES, TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_VIRTUAL_REM_ADDR,
-    TAC_PLUS_VIRTUAL_PORT, TAC_PLUS_ACCT_FLAGS
+    TAC_PLUS_VIRTUAL_PORT, TAC_PLUS_ACCT_FLAGS, TAC_PLUS_AUTHEN_TYPE_CHAP
 )
 
 log = logging.getLogger(__name__)
@@ -107,8 +108,11 @@ def authenticate(cli, args):
     if not vars(args).get('password'):
         args.password = getpass.getpass('password for %s: ' % args.username)
 
-    chap_ppp_id = six.moves.input('chap PPP ID: ') if args.authen_type == 'chap' else None
-    chap_challenge = six.moves.input('chap challenge: ') if args.authen_type == 'chap' else None
+    chap_ppp_id = None
+    chap_challenge = None
+    if args.authen_type == TAC_PLUS_AUTHEN_TYPE_CHAP:
+        chap_ppp_id = six.moves.input('chap PPP ID: ')
+        chap_challenge = six.moves.input('chap challenge: ')
     auth = cli.authenticate(args.username, args.password, priv_lvl=args.priv_lvl,
                             authen_type=args.authen_type, chap_ppp_id=chap_ppp_id,
                             chap_challenge=chap_challenge, rem_addr=args.rem_addr,

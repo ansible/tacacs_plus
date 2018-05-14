@@ -114,7 +114,7 @@ class TACACSAuthenticationContinue(object):
         return ', '.join([
             'data_len: 0',
             'flags: 0',
-            'user_msg: %s' % '*' * len(self.password),
+            'user_msg: %s' % ('*' * len(self.password)),
             'user_msg_len: %s' % len(self.password)
         ])
 

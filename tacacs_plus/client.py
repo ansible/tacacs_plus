@@ -128,7 +128,7 @@ class TACACSClient(object):
             # If the reply header doesn't match, it's likely a non-TACACS+ TCP
             # service answering with data we don't antipicate.  Bail out.
             if any([
-                resp_header.version != header.version,
+                resp_header.version_max != header.version_max,
                 resp_header.type != header.type,
                 resp_header.session_id != header.session_id
             ]):

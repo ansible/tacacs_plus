@@ -18,7 +18,7 @@ logger = logging.getLogger(__file__)
 # TACACSPLUS_AUTH_PROTOCOL = 'ascii'
 #
 
-class TACACSPlusBackend(object):
+class TACACSPlusBackend:
     '''
     Custom TACACS+ auth backend for Django
     '''
@@ -31,21 +31,21 @@ class TACACSPlusBackend(object):
             logger.debug("Created TACACS+ user %s" % (username,))
         return user
 
-    def authenticate(self, username, password):
+    def authenticate(self, request, username=None, password=None):
         if not settings.TACACSPLUS_HOST:
             return None
         try:
             auth = TACACSClient(
-                settings.TACACSPLUS_HOST.encode('utf-8'),
+                settings.TACACSPLUS_HOST,
                 settings.TACACSPLUS_PORT,
-                settings.TACACSPLUS_SECRET.encode('utf-8'),
+                settings.TACACSPLUS_SECRET,
                 timeout=settings.TACACSPLUS_SESSION_TIMEOUT,
             ).authenticate(
-                username.encode('utf-8'), password.encode('utf-8'),
+                username, password,
                 TAC_PLUS_AUTHEN_TYPES[settings.TACACSPLUS_AUTH_PROTOCOL],
             )
         except Exception as e:
-            logger.exception("TACACS+ Authentication Error: %s" % (e.message,))
+            logger.exception("TACACS+ Authentication Error: %s" % (e,))
             return None
         if auth.valid:
             return self._get_or_set_user(username, password)

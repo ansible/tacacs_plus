@@ -149,6 +149,8 @@ def account(cli, args):
 def get_cli(args):
     if not args.key:
         args.key = getpass.getpass("tacacs+ shared key: ")
+    if not args.key:
+        args.key = None
     family = socket.AF_INET
     if args.v6:
         family = family = socket.AF_INET6

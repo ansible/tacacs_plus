@@ -24,3 +24,5 @@ htmlcov
 .eggs
 
 docs/_build
+/venv/
+/.idea/

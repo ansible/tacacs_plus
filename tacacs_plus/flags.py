@@ -1,5 +1,5 @@
 # versioning
-TAC_PLUS_MAJOR_VER = 0xc
+TAC_PLUS_MAJOR_VER = 0xC
 TAC_PLUS_MINOR_VER = 0x0
 TAC_PLUS_MINOR_VER_ONE = 0x1
 
@@ -68,7 +68,7 @@ TAC_PLUS_ACCT_FLAG_WATCHDOG = 0x08
 TAC_PLUS_ACCT_FLAGS = {
     'start': TAC_PLUS_ACCT_FLAG_START,
     'stop': TAC_PLUS_ACCT_FLAG_STOP,
-    'update': TAC_PLUS_ACCT_FLAG_WATCHDOG
+    'update': TAC_PLUS_ACCT_FLAG_WATCHDOG,
 }
 
 # accounting statuses
@@ -77,5 +77,5 @@ TAC_PLUS_ACCT_STATUS_ERROR = 0x02
 TAC_PLUS_ACCT_STATUS_FOLLOW = 0x21
 
 # port and rem_addr, useful inside tac_plus accounting logs
-TAC_PLUS_VIRTUAL_PORT = "python_tty0"
-TAC_PLUS_VIRTUAL_REM_ADDR = "python_device"
+TAC_PLUS_VIRTUAL_PORT = 'python_tty0'
+TAC_PLUS_VIRTUAL_REM_ADDR = 'python_device'

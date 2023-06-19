@@ -3,17 +3,27 @@ import struct
 import six
 
 from .flags import (
-    TAC_PLUS_AUTHEN_SVC_LOGIN, TAC_PLUS_ACCT_STATUS_SUCCESS,
-    TAC_PLUS_ACCT_STATUS_ERROR, TAC_PLUS_ACCT_STATUS_FOLLOW,
-    TAC_PLUS_VIRTUAL_PORT, TAC_PLUS_VIRTUAL_REM_ADDR
+    TAC_PLUS_AUTHEN_SVC_LOGIN,
+    TAC_PLUS_ACCT_STATUS_SUCCESS,
+    TAC_PLUS_ACCT_STATUS_ERROR,
+    TAC_PLUS_ACCT_STATUS_FOLLOW,
+    TAC_PLUS_VIRTUAL_PORT,
+    TAC_PLUS_VIRTUAL_REM_ADDR,
 )
 
 
 class TACACSAccountingStart(object):
-
-    def __init__(self, username, flags, authen_method, priv_lvl, authen_type,
-                 arguments, rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR,
-                 port=TAC_PLUS_VIRTUAL_PORT):
+    def __init__(
+        self,
+        username,
+        flags,
+        authen_method,
+        priv_lvl,
+        authen_type,
+        arguments,
+        rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR,
+        port=TAC_PLUS_VIRTUAL_PORT,
+    ):
         self.username = username
         self.flags = flags
         self.authen_method = authen_method
@@ -74,20 +84,22 @@ class TACACSAccountingStart(object):
 
     def __str__(self):
         args = ', '.join([x.decode('utf-8') for x in self.arguments])
-        return ', '.join([
-            'args: %s' % args,
-            'args_cnt: %d' % len(self.arguments),
-            'authen_method: %s' % self.authen_method,
-            'authen_type: %s' % self.authen_type,
-            'authen_service: %s' % self.service,
-            'flags: %s' % self.flags,
-            'port_len: %d' % len(self.port),
-            'port: %s' % self.port,
-            'priv_lvl: %s' % self.priv_lvl,
-            'rem_addr_len: %d' % len(self.rem_addr),
-            'user: %s' % self.username,
-            'user_len: %d' % len(self.username),
-        ])
+        return ', '.join(
+            [
+                'args: %s' % args,
+                'args_cnt: %d' % len(self.arguments),
+                'authen_method: %s' % self.authen_method,
+                'authen_type: %s' % self.authen_type,
+                'authen_service: %s' % self.service,
+                'flags: %s' % self.flags,
+                'port_len: %d' % len(self.port),
+                'port: %s' % self.port,
+                'priv_lvl: %s' % self.priv_lvl,
+                'rem_addr_len: %d' % len(self.rem_addr),
+                'user: %s' % self.username,
+                'user_len: %d' % len(self.username),
+            ]
+        )
 
 
 class TACACSAccountingReply(object):
@@ -135,14 +147,16 @@ class TACACSAccountingReply(object):
         return {
             TAC_PLUS_ACCT_STATUS_SUCCESS: 'SUCCESS',
             TAC_PLUS_ACCT_STATUS_ERROR: 'ERROR',
-            TAC_PLUS_ACCT_STATUS_FOLLOW: 'FOLLOW'
+            TAC_PLUS_ACCT_STATUS_FOLLOW: 'FOLLOW',
         }.get(self.status, 'UNKNOWN: %s' % self.status)
 
     def __str__(self):
-        return ', '.join([
-            'data: %s' % self.data,
-            'data_len: %d' % len(self.data),
-            'server_msg: %s' % self.server_msg,
-            'server_msg_len: %d' % len(self.server_msg),
-            'status: %s' % self.human_status,
-        ])
+        return ', '.join(
+            [
+                'data: %s' % self.data,
+                'data_len: %d' % len(self.data),
+                'server_msg: %s' % self.server_msg,
+                'server_msg_len: %d' % len(self.server_msg),
+                'status: %s' % self.human_status,
+            ]
+        )

@@ -45,14 +45,14 @@ def crypt(header, body_bytes, secret):
     # !I = network-order (big-endian) unsigned int
     body_length = len(body_bytes)
     unhashed = (
-        struct.pack('!I', header.session_id) +
-        six.b(secret) +
-        struct.pack('B', header.version) +
-        struct.pack('B', header.seq_no)
+        struct.pack('!I', header.session_id)
+        + six.b(secret)
+        + struct.pack('B', header.version)
+        + struct.pack('B', header.seq_no)
     )
     pad = hashed = md5(unhashed).digest()
 
-    if (len(pad) < body_length):
+    if len(pad) < body_length:
         # remake hash, appending it to pad until pad >= header.length
         while True:
             hashed = md5(unhashed + hashed).digest()
@@ -71,7 +71,6 @@ def crypt(header, body_bytes, secret):
 
 
 class TACACSPacket(object):
-
     def __init__(self, header, body_bytes, secret):
         """
         :param header:     a TACACSHeader object
@@ -109,7 +108,6 @@ class TACACSPacket(object):
 
 
 class TACACSHeader(object):
-
     def __init__(self, version, type, session_id, length, seq_no=1, flags=0):
         self.version = version
         self.type = type
@@ -144,13 +142,13 @@ class TACACSHeader(object):
 
         # B = unsigned char
         # !I = network-order (big-endian) unsigned int
-        return struct.pack(
-            'BBBB',
-            self.version,
-            self.type,
-            self.seq_no,
-            self.flags
-        ) + struct.pack('!I', self.session_id) + struct.pack('!I', self.length)
+        return (
+            struct.pack(
+                'BBBB', self.version, self.type, self.seq_no, self.flags
+            )
+            + struct.pack('!I', self.session_id)
+            + struct.pack('!I', self.length)
+        )
 
     @classmethod
     def unpacked(cls, raw):
@@ -159,23 +157,22 @@ class TACACSHeader(object):
         raw = six.BytesIO(raw)
         raw_chars = raw.read(4)
         if raw_chars:
-            version, type, seq_no, flags = struct.unpack(
-                'BBBB',
-                raw_chars
-            )
+            version, type, seq_no, flags = struct.unpack('BBBB', raw_chars)
             session_id, length = struct.unpack('!II', raw.read(8))
             return cls(version, type, session_id, length, seq_no, flags)
         else:
             raise ValueError(
-                "Unable to extract data from header. Likely the TACACS+ key does not match between server and client"
+                'Unable to extract data from header. Likely the TACACS+ key does not match between server and client'
             )
 
     def __str__(self):
-        return ', '.join([
-            'version: %s' % self.version,
-            'type: %s' % self.type,
-            'session_id: %s' % self.session_id,
-            'length: %s' % self.length,
-            'seq_no: %s' % self.seq_no,
-            'flags: %s' % self.flags,
-        ])
+        return ', '.join(
+            [
+                'version: %s' % self.version,
+                'type: %s' % self.type,
+                'session_id: %s' % self.session_id,
+                'length: %s' % self.length,
+                'seq_no: %s' % self.seq_no,
+                'flags: %s' % self.flags,
+            ]
+        )

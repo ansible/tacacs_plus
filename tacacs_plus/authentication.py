@@ -3,17 +3,28 @@ import struct
 import six
 
 from .flags import (
-    TAC_PLUS_PRIV_LVL_MIN, TAC_PLUS_AUTHEN_LOGIN, TAC_PLUS_AUTHEN_SVC_LOGIN,
-    TAC_PLUS_AUTHEN_STATUS_PASS, TAC_PLUS_AUTHEN_STATUS_FAIL, TAC_PLUS_AUTHEN_STATUS_ERROR,
-    TAC_PLUS_AUTHEN_STATUS_GETPASS, TAC_PLUS_VIRTUAL_PORT, TAC_PLUS_VIRTUAL_REM_ADDR
+    TAC_PLUS_PRIV_LVL_MIN,
+    TAC_PLUS_AUTHEN_LOGIN,
+    TAC_PLUS_AUTHEN_SVC_LOGIN,
+    TAC_PLUS_AUTHEN_STATUS_PASS,
+    TAC_PLUS_AUTHEN_STATUS_FAIL,
+    TAC_PLUS_AUTHEN_STATUS_ERROR,
+    TAC_PLUS_AUTHEN_STATUS_GETPASS,
+    TAC_PLUS_VIRTUAL_PORT,
+    TAC_PLUS_VIRTUAL_REM_ADDR,
 )
 
 
 class TACACSAuthenticationStart(object):
-
-    def __init__(self, username, authen_type, priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
-                 data=six.b(''), rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR,
-                 port=TAC_PLUS_VIRTUAL_PORT):
+    def __init__(
+        self,
+        username,
+        authen_type,
+        priv_lvl=TAC_PLUS_PRIV_LVL_MIN,
+        data=six.b(''),
+        rem_addr=TAC_PLUS_VIRTUAL_REM_ADDR,
+        port=TAC_PLUS_VIRTUAL_PORT,
+    ):
         self.username = username
         self.action = TAC_PLUS_AUTHEN_LOGIN
         self.priv_lvl = priv_lvl
@@ -63,20 +74,22 @@ class TACACSAuthenticationStart(object):
         return body
 
     def __str__(self):
-        return ', '.join([
-            'action: %s' % self.action,
-            'authen_type: %s' % self.authen_type,
-            'authen_service: %s' % self.service,
-            'data: %s' % self.data,
-            'data_len: %d' % len(self.data),
-            'priv_lvl: %s' % self.priv_lvl,
-            'port: %s' % self.port,
-            'port_len: %d' % len(self.port),
-            'rem_addr: %s' % self.rem_addr,
-            'rem_addr_len: %d' % len(self.rem_addr),
-            'user: %s' % self.username,
-            'user_len: %d' % len(self.username)
-        ])
+        return ', '.join(
+            [
+                'action: %s' % self.action,
+                'authen_type: %s' % self.authen_type,
+                'authen_service: %s' % self.service,
+                'data: %s' % self.data,
+                'data_len: %d' % len(self.data),
+                'priv_lvl: %s' % self.priv_lvl,
+                'port: %s' % self.port,
+                'port_len: %d' % len(self.port),
+                'rem_addr: %s' % self.rem_addr,
+                'rem_addr_len: %d' % len(self.rem_addr),
+                'user: %s' % self.username,
+                'user_len: %d' % len(self.username),
+            ]
+        )
 
 
 class TACACSAuthenticationContinue(object):
@@ -103,24 +116,25 @@ class TACACSAuthenticationContinue(object):
         password = six.b(self.password)
         data = self.data
         return (
-            struct.pack('!H', len(password)) +
-            struct.pack('!H', len(data)) +
-            struct.pack('B', self.flags) +
-            struct.pack('%ds' % len(password), password) +
-            struct.pack('%ds' % len(data), data)
+            struct.pack('!H', len(password))
+            + struct.pack('!H', len(data))
+            + struct.pack('B', self.flags)
+            + struct.pack('%ds' % len(password), password)
+            + struct.pack('%ds' % len(data), data)
         )
 
     def __str__(self):
-        return ', '.join([
-            'data_len: 0',
-            'flags: 0',
-            'user_msg: %s' % ('*' * len(self.password)),
-            'user_msg_len: %s' % len(self.password)
-        ])
+        return ', '.join(
+            [
+                'data_len: 0',
+                'flags: 0',
+                'user_msg: %s' % ('*' * len(self.password)),
+                'user_msg_len: %s' % len(self.password),
+            ]
+        )
 
 
 class TACACSAuthenticationReply(object):
-
     def __init__(self, status, flags, server_msg, data):
         self.status = status
         self.flags = flags
@@ -171,15 +185,17 @@ class TACACSAuthenticationReply(object):
             TAC_PLUS_AUTHEN_STATUS_PASS: 'PASS',
             TAC_PLUS_AUTHEN_STATUS_FAIL: 'FAIL',
             TAC_PLUS_AUTHEN_STATUS_GETPASS: 'GETPASS',
-            TAC_PLUS_AUTHEN_STATUS_ERROR: 'ERROR'
+            TAC_PLUS_AUTHEN_STATUS_ERROR: 'ERROR',
         }.get(self.status, 'UNKNOWN: %s' % self.status)
 
     def __str__(self):
-        return ', '.join([
-            'data: %s' % self.data,
-            'data_len: %d' % len(self.data),
-            'flags: %s' % self.flags,
-            'server_msg: %s' % self.server_msg,
-            'server_msg_len: %d' % len(self.server_msg),
-            'status: %s' % self.human_status
-        ])
+        return ', '.join(
+            [
+                'data: %s' % self.data,
+                'data_len: %d' % len(self.data),
+                'flags: %s' % self.flags,
+                'server_msg: %s' % self.server_msg,
+                'server_msg_len: %d' % len(self.server_msg),
+                'status: %s' % self.human_status,
+            ]
+        )

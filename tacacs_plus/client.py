@@ -109,7 +109,8 @@ class TACACSClient(object):
             req_type,
             self.session_id,
             len(body.packed),
-            seq_no=seq_no
+            seq_no=seq_no,
+            flags=(0 if self.secret else 1)
         )
         packet = TACACSPacket(header, body.packed, self.secret)
 

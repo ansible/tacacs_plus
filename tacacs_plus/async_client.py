@@ -90,21 +90,16 @@ class TACACSClient(object):
 
     @contextlib.asynccontextmanager
     async def flow_control(self):
-        conn = (self.host, self.port)
-        if self.family == socket.AF_INET6:
+        if self.family == socket.AF_INET:
+            conn = (self.host, self.port)
+        else:
             # For AF_INET6 address family, a four-tuple (host, port,
             # flowinfo, scopeid) is used
             conn = (self.host, self.port, 0, 0)
         sock = socket.socket(self.family, socket.SOCK_STREAM)
         sock.settimeout(self.timeout)
         sock.connect(conn)
-        loop = asyncio.get_running_loop()
-        reader = asyncio.StreamReader(loop=loop)
-        protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
-        transport, _ = await loop.create_connection(
-            lambda: protocol, sock=sock
-        )
-        writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+        reader, writer = await asyncio.open_connection(sock=sock)
         try:
             yield reader, writer
         finally:

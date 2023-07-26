@@ -74,8 +74,7 @@ def fake_pair(request):
             'invalid',
         ],
         [
-            AUTHENTICATE_HEADER
-            + b'\x10\x05\x01\x00\n\x00\x00Password: ',
+            AUTHENTICATE_HEADER + b'\x10\x05\x01\x00\n\x00\x00Password: ',
             'getpass',
         ],
         [AUTHENTICATE_HEADER + b'\x06\x07\x00\x00\x00\x00\x00', 'error'],
@@ -86,7 +85,9 @@ async def test_client_socket_send(fake_pair, packets, state):
     body = TACACSAuthenticationStart('user123', TAC_PLUS_AUTHEN_TYPE_ASCII)
     client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     fake_pair.reader.buff.seek(0)
-    packet = await client.send(body, TAC_PLUS_AUTHEN, reader=fake_pair.reader, writer=fake_pair.writer)
+    packet = await client.send(
+        body, TAC_PLUS_AUTHEN, reader=fake_pair.reader, writer=fake_pair.writer
+    )
     assert isinstance(packet, TACACSPacket)
     reply = TACACSAuthenticationReply.unpacked(packet.body)
     assert getattr(reply, state) is True
@@ -111,7 +112,12 @@ async def test_client_socket_send_wrong_headers(fake_pair, packets):
     body = TACACSAuthenticationStart('user123', TAC_PLUS_AUTHEN_TYPE_ASCII)
     client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     with pytest.raises(socket.error):
-        await client.send(body, TAC_PLUS_AUTHEN, reader=fake_pair.reader, writer=fake_pair.writer)
+        await client.send(
+            body,
+            TAC_PLUS_AUTHEN,
+            reader=fake_pair.reader,
+            writer=fake_pair.writer,
+        )
 
 
 # test client.authenticate
@@ -133,7 +139,9 @@ async def test_authenticate_ascii(fake_pair, packets):
               STATUS_PASS              <- server
     """
     client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
-    reply = await client.authenticate('username', 'pass', reader=fake_pair.reader, writer=fake_pair.writer)
+    reply = await client.authenticate(
+        'username', 'pass', reader=fake_pair.reader, writer=fake_pair.writer
+    )
     assert reply.valid
 
     fake_pair.writer.buff.seek(0)
@@ -169,8 +177,11 @@ async def test_authenticate_pap(fake_pair, packets):
     """
     client = TACACSClient('127.0.0.1', 49, None, session_id=12345)
     reply = await client.authenticate(
-        'username', 'pass', authen_type=TAC_PLUS_AUTHEN_TYPE_PAP,
-        reader=fake_pair.reader, writer=fake_pair.writer
+        'username',
+        'pass',
+        authen_type=TAC_PLUS_AUTHEN_TYPE_PAP,
+        reader=fake_pair.reader,
+        writer=fake_pair.writer,
     )
     assert reply.valid
 
@@ -206,7 +217,7 @@ async def test_authenticate_chap(fake_pair, packets):
         chap_ppp_id='A',
         chap_challenge='challenge',
         reader=fake_pair.reader,
-        writer=fake_pair.writer
+        writer=fake_pair.writer,
     )
     assert reply.valid
 
@@ -218,11 +229,7 @@ async def test_authenticate_chap(fake_pair, packets):
         TACACSAuthenticationStart(
             'username',
             TAC_PLUS_AUTHEN_TYPE_CHAP,
-            data=(
-                b'A'
-                + b'challenge'
-                + md5(b'Apasschallenge').digest()
-            ),
+            data=(b'A' + b'challenge' + md5(b'Apasschallenge').digest()),
         ).packed
         == first_body
     )
@@ -237,7 +244,8 @@ async def test_authorize_ascii(fake_pair, packets):
     reply = await client.authorize(
         'username',
         arguments=[b'service=shell', b'cmd=show', b'cmdargs=version'],
-        reader=fake_pair.reader, writer=fake_pair.writer
+        reader=fake_pair.reader,
+        writer=fake_pair.writer,
     )
     assert reply.valid
 
@@ -268,7 +276,7 @@ async def test_authorize_pap(fake_pair, packets):
         arguments=[b'service=shell', b'cmd=show', b'cmdargs=version'],
         authen_type=TAC_PLUS_AUTHEN_TYPE_PAP,
         reader=fake_pair.reader,
-        writer=fake_pair.writer
+        writer=fake_pair.writer,
     )
     assert reply.valid
 
@@ -298,7 +306,8 @@ async def test_authorize_chap(fake_pair, packets):
         'username',
         arguments=[b'service=shell', b'cmd=show', b'cmdargs=version'],
         authen_type=TAC_PLUS_AUTHEN_TYPE_CHAP,
-        reader=fake_pair.reader, writer=fake_pair.writer
+        reader=fake_pair.reader,
+        writer=fake_pair.writer,
     )
     assert reply.valid
 
@@ -329,7 +338,8 @@ async def test_account_start(fake_pair, packets):
         'username',
         TAC_PLUS_ACCT_FLAG_START,
         arguments=[b'service=shell', b'cmd=show', b'cmdargs=version'],
-        reader=fake_pair.reader, writer=fake_pair.writer
+        reader=fake_pair.reader,
+        writer=fake_pair.writer,
     )
     assert reply.valid
 
@@ -362,7 +372,8 @@ async def test_authorize_equal_priv_lvl(fake_pair, packets):
         arguments=[b'service=shell', b'cmd=show', b'cmdargs=version'],
         authen_type=TAC_PLUS_AUTHEN_TYPE_PAP,
         priv_lvl=TAC_PLUS_PRIV_LVL_MAX,
-        reader=fake_pair.reader, writer=fake_pair.writer
+        reader=fake_pair.reader,
+        writer=fake_pair.writer,
     )
     assert (
         reply.valid
@@ -381,7 +392,8 @@ async def test_authorize_lesser_priv_lvl(fake_pair, packets):
         arguments=[b'service=shell', b'cmd=show', b'cmdargs=version'],
         authen_type=TAC_PLUS_AUTHEN_TYPE_PAP,
         priv_lvl=TAC_PLUS_PRIV_LVL_MAX,
-        reader=fake_pair.reader, writer=fake_pair.writer
+        reader=fake_pair.reader,
+        writer=fake_pair.writer,
     )
     assert (
         not reply.valid

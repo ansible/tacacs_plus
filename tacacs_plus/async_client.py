@@ -112,8 +112,8 @@ class TACACSClient(object):
             if not existing:
                 # if reader/writer were not provided -
                 # we need to properly close socket and writer
-                writer.close()
-                await writer.wait_closed()
+                yielded_writer.close()
+                await yielded_writer.wait_closed()
                 sock.close()
 
     async def send(self, body, req_type, seq_no=1, reader=None, writer=None):

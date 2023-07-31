@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 if sys.version_info < (3, 7):
     raise Exception(
-        'Async TACACS client is not compatible with Python version %s' % sys.version
+        'Async TACACS client requires Python 3.7+. Current Python version: %s' % sys.version
     )
 
 
